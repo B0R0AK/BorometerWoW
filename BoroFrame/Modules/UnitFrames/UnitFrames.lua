@@ -19,6 +19,7 @@ local defaults = {
             refreshOn = { "PLAYER_FOCUS_CHANGED" }, pos = { "CENTER", -520, -250 } },
     },
     hideBlizzard = true,
+    smooth = true,
 }
 for i = 1, 5 do
     defaults.frames["boss" .. i] = { unit = "boss" .. i, w = 200, h = 34, powerHeight = 3, healthTextWidth = 50,
@@ -39,6 +40,7 @@ end
 
 function M:OnEnable()
     local cfg = ns.Config:Get("unitframes")
+    UF.interp = cfg.smooth and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut or nil
     for name, spec in pairs(cfg.frames) do
         if not UF.frames[name] then
             local frame = UF.Create(name, spec)

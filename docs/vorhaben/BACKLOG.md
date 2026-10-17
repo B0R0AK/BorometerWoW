@@ -11,8 +11,8 @@ Modell: S = Sonnet, O = Opus, F = Fable. Abhängigkeiten in Klammern.
 | V05 | Party-Frames (SecureGroupHeader, Rollen, Dispel, Aggro) | F | V01, V03 |
 | V06 | Raid-Frames (bis 40, Gruppen, Dirty-Flag-Batching, Performance-Test) | F | V05 |
 | V07 | Cooldown Manager: Blizzard-Viewer skinnen, positionieren, Tracking-Leisten | O | V01 |
-| V08 | Boss-Timeline: Renderer auf `C_EncounterTimeline`, Phasen, Warnungen | O | V01 |
-| V09 | Boss-Timeline: BigWigs-Adapter und Verifikation (offene Punkte 2, 3) | O | V08 |
+| V08 | Boss-Timeline: eigener Renderer auf `C_EncounterTimeline` (`SetViewType(None)`, `GetSortedEventList`, `GetEventTimer` + `SetTimerDuration`), Warnungen (`C_EncounterWarnings`) | O | V01 |
+| V09 | BigWigs: Quelle `BigWigs_StartBar/Pause/Resume/Stop` für Boss-Module mit eigenen Timern, Moduswechsel (`enhanced`/`blizzbars`/`blizztimeline`), Bar-Style `BoroFrame` über `BigWigsAPI:RegisterBarStyle` | O | V08 |
 | V10 | Nameplates: eigenes Plate, Auren, Cast, Bedrohung, Blizzard-Plate ausblenden | O | V02, V03 |
 | V11 | Damage-Meter-Skin (`C_DamageMeter`-Fenster) | O | V01 |
 | V12 | Inventar: kombinierte Taschen, Suche, Sortierung, Bank, Skin | O | V01 |

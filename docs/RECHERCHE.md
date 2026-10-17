@@ -1,56 +1,60 @@
-# Recherche: WoW Retail API (Midnight, 12.0.x)
+# Recherche: WoW Retail API (Midnight, Patch 12.1.5, TOC 120105)
 
-Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.** Die Sandbox hatte keinen Zugriff auf warcraft.wiki.gg (Proxy 403). Quellen sind die frei zugänglichen Referenz-Repos, teils KI-erzeugt, und der Code der Community:
+Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.**
 
-- `Amadeus-/WoWAddonDevGuide` (12a Secret Safe APIs, 13 Cooldown Viewer, 12 Migration, 01 API)
-- `DennysOliveira/wow-addon-dev` (MIT, als Skill-Referenz übernommen)
-- Eigene Prüfung: der Smoke-Test simuliert Secrets, er ersetzt keinen Spieltest.
+## Quellen und ihr Gewicht
+1. **warcraft.wiki.gg** (gelesen): `Secret_Values`, `Patch_12.0.0/12.0.5/12.0.7/12.1.0/12.1.5 API_changes`, Einzelseiten `API:…`. Maßgeblich.
+2. **Blizzards UI-Code** (`Gethe/wow-ui-source`) und **BigWigs-Quellcode** (`BigWigsMods/BigWigs`): gelesen für Frame-Namen und die Timeline-Anbindung. Maßgeblich für das, was der Code tut.
+3. **WoWUIBugs** (Issue-Tracker): nur Titel gelesen.
+4. Community-Referenzen (`Amadeus-/WoWAddonDevGuide`, `DennysOliveira/wow-addon-dev`): teils KI-erzeugt, **widersprechen dem Wiki** (siehe unten). Nur als Wegweiser.
 
-## Was gilt (aus den Quellen, konsistent)
-- **Secret Values** (seit 12.0.0, überall im Kampf, nicht nur in Instanzen): nicht vergleichen, rechnen, verketten, indizieren. Engine-Widgets nehmen sie an: `StatusBar:SetValue/SetMinMaxValues/SetTimerDuration`, `FontString:SetText/SetFormattedText`, `Cooldown:SetCooldownFromDurationObject`, `Frame:SetAlphaFromBoolean`. Prüfen: `issecretvalue`, `canaccessvalue`, `hasanysecretvalues`.
-- `UnitHealthPercent` / `UnitPowerPercent` liefern nicht geheime Prozentwerte (Argument `CurveConstants.ScaleTo100`).
-- `AbbreviateNumbers(value, breakpoints)` akzeptiert geheime Zahlen und gibt einen normalen String.
-- `COMBAT_LOG_EVENT_UNFILTERED` steht Addons nicht mehr zur Verfügung. Ersatz: Unit-Events und `C_DamageMeter`.
-- Ab 12.0.1 ist `SetCooldownFromDurationObject` die einzige Cooldown-Methode, die Secrets annimmt.
-- 12.0.5: Aura-Klassifikationsfelder (`isHelpful`, `isHarmful`, `isRaid`, `isNameplateOnly`, `isFromPlayerOrPlayerPet`) nicht geheim; Unit-Token von `nameplate*`, `boss*`, `party*`, `raid*` können geheim sein.
-- Systeme: `C_CooldownViewer`, `C_EncounterTimeline`, `C_EncounterWarnings`, `C_DamageMeter`, `C_NamePlate`.
+## Korrekturen gegenüber der ersten Fassung
+| Annahme (Community-Guide) | Befund (Wiki/Code) |
+|---|---|
+| Interface 120005 | **120105** (12.1.5, 21.09.2026) |
+| Secrets dürfen nicht verkettet/formatiert werden | **Verketten und `string.format` sind erlaubt**, das Ergebnis bleibt geheim. Verboten: Arithmetik, Vergleiche, `#`, Indizieren, Schlüssel, Aufruf |
+| `C_EncounterTimeline.GetUpcomingEvents`, `GetCurrentPhase`, `GetPhaseInfo` | gibt es nicht. Real: `GetEventList`, `GetSortedEventList`, `GetEventInfo`, `GetEventState`, `GetEventTimeRemaining`, `GetEventTimer`, `GetTrackList`, `SetViewType` … |
+| BigWigs-Anbindung unbekannt | geklärt: BigWigs liest die Blizzard-Timeline und sendet `BigWigs_StartBar`/`Pause`/`Resume`/`Stop`; eigene Optik über `BigWigsAPI:RegisterBarStyle` |
+| `AbbreviateNumbers` mit eigener Tabelle | Signatur stimmt (`AbbreviateNumbers(n, {breakpointData=…})`), seit 12.0.5 gibt es den sanktionierten `C_StringUtil.CreateAbbreviatedNumberFormatter()`; wir nutzen ihn |
+| `UnitHealthPercent` liefert nie Secrets | Ergebnis geheim nur, wenn die übergebene **Kurve** geheim ist (`SecretWhenCurveSecret`) |
+| Nur Kampf macht Secrets | Auslöser sind "Secret Predicates": Kampf, Begegnung, M+, PvP-Match, Instanzkarten, Unit-Identität, Aura-/Cooldown-Zustand. Test im Spiel erzwingbar (siehe unten) |
 
-## Offen / im Spiel prüfen
-| # | Frage | Warum unsicher | Vorhaben |
-|---|---|---|---|
-| 1 | Interface-Nummer `120005` stimmt mit Live überein | nur aus einem Community-Guide | Release |
-| 2 | Genaue Funktionsnamen von `C_EncounterTimeline` | zwei Guides nennen unterschiedliche (`GetEventList/GetEventInfo` vs. `GetUpcomingEvents`) | Boss-Timeline |
-| 3 | Wie speist BigWigs die Timeline in Midnight, und gibt es eine Schnittstelle für Fremd-Anzeigen | keine belastbare Quelle gefunden | BigWigs-Adapter |
-| 4 | Signatur und Verhalten von `AbbreviateNumbers` mit unserer Breakpoint-Tabelle (`UF.Short`) | nur aus Guide, Rundung ungeprüft | Unit Frames |
-| 5 | `UnitHealthPercent(unit, false, CurveConstants.ScaleTo100)` Argumente | aus Guide | Unit Frames |
-| 6 | Blizzard-Unit-Frames per `SetParent(hidden)` + `UnregisterAllEvents` ohne Taint, auch mit Edit Mode | Taint nur im Spiel sichtbar | Unit Frames |
-| 7 | Skinnen/Umpositionieren der Cooldown-Viewer-Frames ohne Taint | Guide 13 beschreibt Fallen, Details im Spiel | Cooldown-Manager |
-| 8 | Damage-Meter-Fenster: skinnen reicht, oder braucht es eigene Darstellung | Felder sind im Kampf geheim, sourceGUID ab 12.1.5 teils geheim | Meter-Skin |
-| 9 | Party/Raid: welche Tokens/Namen sind geheim (12.0.5) und was heißt das für Header und Klassenfarbe | Regeln sind eng und ändern sich | Party/Raid |
-| 10 | Aura-Icons: `GetAuraDuration` + Cooldown-Swipe ohne Taint im Kampf | aus Guide | Auren |
-| 11 | `SecureUnitButtonTemplate` + `togglemenu` Klickattribut in 12.x | aus dem Gedächtnis des Standardmusters | Unit Frames |
+## Neu verstanden, wirkt auf den Code
+- **Secret Aspects / Anker:** `StatusBar:SetValue(secret)` macht Position und Maße der Bar und aller daran verankerten Regionen geheim. Wir lesen nie Maße oder Punkte von Bars. `FontString:SetText(secret)` macht `GetText()` geheim.
+- **Test ohne Kampf:** `/console addonCombatRestrictionsForced 1` (außerdem `addonEncounterRestrictionsForced`, `addonChallengeModeRestrictionsForced`, `addonPvPMatchRestrictionsForced`, `addonMapRestrictionsForced`, `addonChatRestrictionsForced`). Das ersetzt Puppen-Tests im Kampf.
+- **Boss-Timeline:** `SetViewType(Enum.EncounterTimelineViewType.None)` ist ausdrücklich für Addons, die die Anzeige übernehmen. Pro Event liefert `GetEventTimer(id)` ein Duration-Objekt, das direkt in `StatusBar:SetTimerDuration` geht (kein Lua pro Frame).
+- **12.1.5:** deprecated Fallbacks entfernt (`GetItemInfo`, `GetItemCount`, `IsEquippedItem`, `GetCoinText` … nur noch über `C_Item.*`, `C_CurrencyInfo.*`). Neu `CreateFrameWithOptions`, `GetScriptBucketThrottleLimits`, `C_UnitAuras.GetAuraCasterGUID`, `GetRefreshCarryOverDuration`, Nameplate-CVars `nameplateTopInset/BottomInset/MotionSpeed`.
+- Frame-Namen geprüft: `EncounterTimeline`, `CriticalEncounterWarnings`/`MediumEncounterWarnings`/`MinorEncounterWarnings`, `DamageMeter`, `EssentialCooldownViewer`, `UtilityCooldownViewer`, `BuffIconCooldownViewer`, `BuffBarCooldownViewer`, `CooldownViewerSettings`.
 
-## Bekannte Blizzard-Bugs (WoWUIBugs, Stand 2026-10-17)
-Quelle: https://github.com/Stanzilla/WoWUIBugs/issues. Nur die Titel der ersten Seiten gelesen, Details je Issue vor der Arbeit prüfen. Der Patch-12.1.5-Wikiartikel war aus der Sandbox nicht abrufbar (Host gesperrt), diese Änderungen sind **nicht** eingearbeitet.
-
+## Bekannte Blizzard-Bugs (WoWUIBugs, nur Titel gelesen)
 | Issue | Befund | Betrifft |
 |---|---|---|
-| #884 | Cooldown-Manager: Debuffs auf dem Ziel brechen, wenn das Ziel zweimal im selben Frame wechselt | V07 |
+| #884 | Cooldown-Manager: Debuffs auf dem Ziel brechen bei zweimaligem Zielwechsel im selben Frame | V07 |
 | #875 | Cooldown Manager verfolgt Blutungen nicht | V07 |
 | #881 | Nameplate-Debuffs: Dauerzahlen brechen nach 60 s | V10, V03 |
-| #834 | `UnitChannelInfo`/`UnitChannelDuration` liefern bei Strahl des Frosts falsche Werte | V02 |
+| #834 | `UnitChannelInfo`/`UnitChannelDuration` falsch bei Strahl des Frosts | V02 |
 | #420 | `UnitPartialPower` für Beschwörer-Essenzen defekt | V04 |
 | #888 | Aktionsleisten tainten, wenn Addon-Code sie im Kampf zeigt/versteckt | V14 |
-| #876 | Chat-Eingabefeld kann Attribute in M+/Chat-Lockdown dauerhaft geheim machen | V13d |
-| #803 | Scrolling Combat Text kann tainten und Anzeigen verweigern | – |
-| #811 | Tooltip: Secret-Value-Fehler in `LayoutFrame.lua` | V13f |
-| #826 | Dropdown-Taint zerstört Communities-Fenster im Boss-Kampf | V13d, V13f |
+| #876, #826, #811 | Taint in Chat-Eingabe, Dropdowns, Tooltip-Layout | V13d, V13f |
+| #803 | Scrolling Combat Text kann tainten | – |
 
-Folge: Spezialfälle (Cooldown-Manager-Debuffs, Kanalzauber, Nameplate-Dauer) bekommen eigene Testfälle im Spiel, nicht nur den Smoke-Test.
+## Offen / im Spiel prüfen
+| # | Frage | Vorhaben |
+|---|---|---|
+| 1 | Hat ein frischer `AbbreviatedNumberFormatter` brauchbare Standard-Schwellen, oder braucht er `SetBreakpoints(GetDefaultAbbreviationBreakpoints())`? Rundung prüfen | Unit Frames |
+| 2 | Blizzard-Unit-Frames per `SetParent(hidden)` + `UnregisterAllEvents` ohne Taint, auch mit Edit Mode | Unit Frames |
+| 3 | `SecureUnitButtonTemplate` mit `*type2 = "togglemenu"` in 12.1 | Unit Frames |
+| 4 | `StatusBar:SetValue(secret, interpolation)` mit Smoothing: sichtbar sauber bei Boss-Frames (Max-Leben geheim)? | Unit Frames |
+| 5 | Timeline: Verhalten von `SetViewType(None)` mit BigWigs-Modus `enhanced`; wann liefert BigWigs eigene Bars (`useCustomTimers`) statt Blizzard-Events | V08, V09 |
+| 6 | Cooldown-Viewer-Frames skinnen/verschieben ohne Taint | V07 |
+| 7 | Damage-Meter-Fenster: Skin reicht, oder eigene Darstellung nötig; `sourceGUID` ab 12.1.5 teils geheim | V11 |
+| 8 | Party/Raid: Tokens, Namen und Klassenfarbe unter den Unit-Identity-Regeln | V05, V06 |
+| 9 | Aura-Icons: `GetAuraDuration` + Cooldown-Swipe ohne Taint, Bug #881 | V03 |
+| 10 | `GetScriptBucketThrottleLimits`: was begrenzt Blizzard für Addon-Skripte, und wie nutzt der Scheduler das | Core |
 
-Jede Zeile wird zu einem Prüfpunkt im jeweiligen PR. Ergebnisse tragen wir hier nach.
+Prüfmethode je Punkt: `/console scriptErrors 1`, Secrets erzwingen (siehe oben), Ergebnis hier nachtragen.
 
-## Performance-Befund aus den Quellen
-- `OnUpdate` pro Frame summiert sich bei 120–144 fps stark, Timer oder Schwellen sind besser.
-- Lokale Globals bringen heute wenig, die Regel ist billig, die Wirkung klein. Gemessen wird, nicht geglaubt (`ns.Debug.Profile`).
-- Größter Hebel in Midnight: Rendern an die Engine übergeben (`SetTimerDuration`, Duration-Objekte), nicht in Lua nachbauen.
+## Performance-Befund
+- `OnUpdate` pro Frame summiert sich bei hohen Frameraten, Timer oder Schwellen sind besser.
+- Größter Hebel: Rendern an die Engine geben (`SetTimerDuration`, Duration-Objekte, Interpolation von `SetValue`).
+- Gemessen wird, nicht geglaubt (`ns.Debug.Profile`, `GetAddOnCPUUsage`).

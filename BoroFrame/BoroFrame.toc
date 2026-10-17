@@ -1,4 +1,4 @@
-## Interface: 120005
+## Interface: 120105
 ## Title: BoroFrame
 ## Notes: Komplettes Retail-UI: Unit Frames, Gruppen, Cooldown Manager, Boss-Timeline, Nameplates, Skins.
 ## Author: B0R0AK

@@ -15,17 +15,19 @@ local UnitHealth, UnitHealthMax = UnitHealth, UnitHealthMax
 local UnitPower, UnitPowerMax = UnitPower, UnitPowerMax
 local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 
--- K/M/B with one decimal. AbbreviateNumbers accepts secret numbers and returns a plain string.
-local abbreviation = { breakpointData = {
-    { breakpoint = 1e9, abbreviation = "B", significandDivisor = 1e8, fractionDivisor = 10, abbreviationIsGlobal = false },
-    { breakpoint = 1e6, abbreviation = "M", significandDivisor = 1e5, fractionDivisor = 10, abbreviationIsGlobal = false },
-    { breakpoint = 1e3, abbreviation = "K", significandDivisor = 1e2, fractionDivisor = 10, abbreviationIsGlobal = false },
-    { breakpoint = 0, abbreviation = "", significandDivisor = 1, fractionDivisor = 1, abbreviationIsGlobal = false },
-} }
-
+-- Abbreviated numbers ("1.2M"). The formatter exists since 12.0.5, FormatNumber accepts secret numbers.
+local formatter
 function UF.Short(value)
-    return AbbreviateNumbers(value, abbreviation)
+    if formatter == nil then
+        formatter = C_StringUtil and C_StringUtil.CreateAbbreviatedNumberFormatter
+            and C_StringUtil.CreateAbbreviatedNumberFormatter() or false
+    end
+    if formatter then return formatter:FormatNumber(value) end
+    return AbbreviateNumbers(value)
 end
+
+-- Set from config when the module is enabled: Enum.StatusBarInterpolation.ExponentialEaseOut or nil.
+UF.interp = nil
 
 -- Color needs Lua logic, so every API result is checked for secrecy first.
 function UF.UnitColor(unit)
@@ -93,11 +95,11 @@ register("Health", {
         frame.health:SetStatusBarColor(UF.UnitColor(unit))
     end,
     events = {
-        UNIT_HEALTH = function(frame) frame.health:SetValue(UnitHealth(frame.unit)) end,
+        UNIT_HEALTH = function(frame) frame.health:SetValue(UnitHealth(frame.unit), UF.interp) end,
         UNIT_MAXHEALTH = function(frame)
             local unit = frame.unit
             frame.health:SetMinMaxValues(0, UnitHealthMax(unit))
-            frame.health:SetValue(UnitHealth(unit))
+            frame.health:SetValue(UnitHealth(unit), UF.interp)
         end,
         UNIT_FACTION = function(frame) frame.health:SetStatusBarColor(UF.UnitColor(frame.unit)) end,
     },

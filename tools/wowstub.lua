@@ -92,6 +92,10 @@ RAID_CLASS_COLORS = { WARRIOR = { r = .78, g = .61, b = .43 } }
 FACTION_BAR_COLORS = { [4] = { r = 1, g = 1, b = 0 } }
 PowerBarColor = { MANA = { r = 0, g = 0, b = 1 } }
 CurveConstants = { ScaleTo100 = {} }
+Enum = { StatusBarInterpolation = { Immediate = 0, ExponentialEaseOut = 1 } }
+C_StringUtil = { CreateAbbreviatedNumberFormatter = function()
+    return { FormatNumber = function(_, v) assert(issecretvalue(v) or type(v) == "number"); return "1.2M" end }
+end }
 function UnitHealth() return S.secret("hp") end
 function UnitHealthMax() return S.secret("maxhp") end
 function UnitPower() return S.secret("pow") end

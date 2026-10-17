@@ -8,6 +8,6 @@ read_globals = {
     "BackdropTemplateMixin", "STANDARD_TEXT_FONT", "GetRealmName", "UnitName", "ReloadUI", "debugprofilestop",
     "issecretvalue", "RegisterUnitWatch", "UnitHealth", "UnitHealthMax", "UnitHealthPercent", "UnitPower",
     "UnitPowerMax", "UnitPowerType", "UnitGetTotalAbsorbs", "UnitIsPlayer", "UnitClass", "UnitReaction",
-    "AbbreviateNumbers", "CurveConstants", "RAID_CLASS_COLORS", "FACTION_BAR_COLORS", "PowerBarColor",
+    "AbbreviateNumbers", "Enum", "C_StringUtil", "CurveConstants", "RAID_CLASS_COLORS", "FACTION_BAR_COLORS", "PowerBarColor",
     "PlayerFrame", "TargetFrame", "FocusFrame", "BossTargetFrameContainer",
 }
