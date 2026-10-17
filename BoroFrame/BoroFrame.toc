@@ -52,3 +52,6 @@ Modules\UnitFrames\Auras.lua
 
 Modules\DamageMeterSkin\Entries.lua
 Modules\DamageMeterSkin\DamageMeterSkin.lua
+
+Modules\CooldownManager\Style.lua
+Modules\CooldownManager\CooldownManager.lua

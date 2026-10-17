@@ -7,6 +7,8 @@ local widget = {}
 widget.__index = function(t, k)
     local m = rawget(widget, k)
     if m then return m end
+    -- Lua fields (lowercase, like Blizzard mixin state) are nil when unset, as in the client
+    if type(k) == "string" and k:match("^%l") then return nil end
     return function() end  -- every other widget method is a no-op
 end
 
@@ -44,6 +46,14 @@ local function checkBool(v) assert(type(v) == "boolean", "boolean expected, got 
 function widget:SetAlphaFromBoolean(v, a, b) checkBool(v); self.alphaBool = { v, a, b } end
 function widget:SetVertexColorFromBoolean(v, a, b) checkBool(v); assert(a and b); self.colorBool = { v, a, b } end
 function widget:SetHideCountdownNumbers(h) self.hideNumbers = h end
+function widget:ClearAllPoints() self.points = {} end
+function widget:SetPoint(...) self.points = self.points or {}; self.points[#self.points + 1] = { ... } end
+function widget:SetSize(w, h) self.w, self.h = w, h end
+function widget:SetScale(s) self.scale = s end
+function widget:GetEffectiveScale() return self.effScale or 1 end
+function widget:IsProtected() return self.protected == true end
+function widget:SetAlpha(a) self.alpha = a end
+function widget:SetFont(font, size, flags) self.font = { font, size, flags } end
 
 function S.newWidget()
     return setmetatable({ scripts = {}, hooks = {}, events = {}, unitEvents = {}, attr = {}, shown = true, watched = false }, widget)
@@ -163,6 +173,16 @@ function ReloadUI() S.reloaded = true end
 function debugprofilestop() return os.clock() * 1000 end
 function RegisterUnitWatch(f) f.watched = true end
 SlashCmdList = {}
+-- Post-hook like the client: original runs first, its results are returned unchanged.
+function hooksecurefunc(t, k, fn)
+    if type(t) == "string" then t, k, fn = _G, t, k end
+    local orig = t[k]
+    t[k] = function(...)
+        local r = { orig(...) }
+        fn(...)
+        return unpack(r)
+    end
+end
 S.timers = {}
 C_Timer = { After = function(sec, fn) S.timers[#S.timers + 1] = { sec, fn } end }
 -- Run every pending C_Timer.After callback once.
