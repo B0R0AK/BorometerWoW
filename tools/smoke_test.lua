@@ -161,4 +161,33 @@ test("slash commands parse", function()
     SlashCmdList.BOROFRAME("module UnitFrames on")
 end)
 
+test("window skins: toggle per skin, missing frames tolerated", function()
+    for _, addon in ipairs({ "Blizzard_WorldMap", "Blizzard_MailFrame", "Blizzard_ObjectiveTracker" }) do
+        S.fire("ADDON_LOADED", addon)  -- the frames do not exist in the stub, skins must not error
+    end
+    local enabled = ns.Config:Get("skins").enabled
+    for _, name in ipairs({ "WorldMap", "Quest", "Gossip", "Merchant", "Mail", "ObjectiveTracker" }) do
+        assert(enabled[name] == true, name)
+    end
+end)
+
+test("skin helpers: panel, tab, close button", function()
+    local function w() local x = S.newWidget(); x.alpha = 1; function x:SetAlpha(a) self.alpha = a end; return x end
+    local frame = w()
+    frame.NineSlice, frame.Bg, frame.TopTileStreaks, frame.PortraitContainer = w(), w(), w(), w()
+    frame.Inset = { NineSlice = w(), Bg = w() }
+    frame.TitleContainer = { TitleText = w() }
+    frame.CloseButton = w()
+    ns.Skin.Panel(frame)
+    assert(frame.NineSlice.alpha == 0 and frame.Inset.Bg.alpha == 0 and frame.PortraitContainer.alpha == 0)
+    assert(#frame.CloseButton.hooks == 2)
+    ns.Skin.Panel(frame)  -- second call is a no-op
+    assert(#frame.CloseButton.hooks == 2)
+    local tab = w()
+    tab.TabTextures = { w(), w() }
+    function tab:IsEnabled() return true end
+    ns.Skin.Tab(tab)
+    assert(tab.TabTextures[1].alpha == 0)
+end)
+
 print(("OK %d tests"):format(passed))

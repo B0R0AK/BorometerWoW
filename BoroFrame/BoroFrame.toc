@@ -20,6 +20,12 @@ Core\Slash.lua
 Media\Theme.lua
 
 Skins\Common.lua
+Skins\WorldMap.lua
+Skins\Quest.lua
+Skins\Gossip.lua
+Skins\Merchant.lua
+Skins\Mail.lua
+Skins\ObjectiveTracker.lua
 
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Factory.lua
