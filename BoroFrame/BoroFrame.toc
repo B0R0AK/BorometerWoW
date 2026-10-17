@@ -31,6 +31,12 @@ Skins\PlayerSpells.lua
 Skins\SpellBook.lua
 Skins\Talents.lua
 Skins\Professions.lua
+Skins\WorldMap.lua
+Skins\Quest.lua
+Skins\Gossip.lua
+Skins\Merchant.lua
+Skins\Mail.lua
+Skins\ObjectiveTracker.lua
 
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Factory.lua
