@@ -35,6 +35,12 @@ Wann Werte geheim sind, steuern die "Secret Predicates" der API-Doku, nicht alle
 | Duration-Objekte holen | `C_Spell.GetSpellCooldownDuration`, `C_Spell.GetSpellChargeDuration`, `C_UnitAuras.GetAuraDuration`, `UnitCastingDuration`, `UnitChannelDuration`, `C_EncounterTimeline.GetEventTimer(eventID)`, selbst bauen: `C_DurationUtil.CreateDuration()` |
 | Sichtbarkeit nach Bool | `Frame:SetAlphaFromBoolean(secretBool, ...)` |
 
+### Auren seit 12.1: AuraContainer (nicht `C_UnitAuras`)
+Laut den 12.1-Notizen (`Patch_12.1.0/API_changes/notes`) werfen die Aura-APIs über Index, Slot oder Instanz-ID bei geheimen Auren einen **Lua-Fehler**, `UNIT_AURA` liefert dann geheime Payloads und AuraData ist komplett geheim. Der vorgesehene Weg ist `CreateFrame("AuraContainer", nil, parent, "CustomAuraContainerTemplate")` mit `AddAuraGroup(key, filterString, options)` und Aura-Buttons, die Blizzard in sicherem Code poolt und aktualisiert. Wir bauen nur die Optik je Button (`initializeFrame`). Regeln: Anzeigeregionen müssen Kinder des Buttons sein, **nichts an einen Aura-Container verankern** (gesperrte Layout-Aspekte vererben sich), `SecureAuraHeaderTemplate` gibt es nicht mehr. Umgesetzt in `Modules/UnitFrames/Auras.lua` (`UF.Auras.Create`).
+
+### Boss-Timeline übernehmen
+`EncounterTimeline:SetAttribute("overrideViewType", Enum.EncounterTimelineViewType.None)` plus `C_EncounterTimeline.SetViewType(None)`: Blizzard liest das Attribut in `UpdateSystemSettingViewType` ausdrücklich für Addons, der Edit Mode setzt die Ansicht dann nicht zurück. Fortschritt: `GetEventTimer(id)` an `StatusBar:SetTimerDuration`, Restzeit über `C_DurationUtil.CreateDurationTextBinding()` mit `C_StringUtil.CreateSecondsFormatter()`. `severity`, `icons`, `isApproximate` sind in Begegnungen geheim, Symbole setzt der Client über `C_EncounterTimeline.SetEventIconTextures`, die Balkenfarbe liefert `GetEventColor(id)`.
+
 ### Entfallen / geändert
 - `COMBAT_LOG_EVENT_UNFILTERED` steht Addons nicht mehr offen. Ersatz: Unit-Events und `C_DamageMeter`.
 - 12.1.5 hat die Veraltet-Fallbacks entfernt. Immer `C_Item.GetItemInfo`, `C_Item.GetItemCount` usw. statt der globalen `GetItem*`/`IsEquippedItem`-Funktionen (Inventar!). Gleiches für `C_CurrencyInfo.GetCoinText*`.

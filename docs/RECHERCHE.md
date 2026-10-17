@@ -61,6 +61,25 @@ Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.**
 
 Prüfmethode je Punkt: `/console scriptErrors 1`, Secrets erzwingen (siehe oben), Ergebnis hier nachtragen.
 
+## Stand nach Welle 1 (gebaut, nicht im Spiel getestet)
+Gebaut: Cast-Balken, Auren (AuraContainer), Frame-Extras, Cooldown Manager, Boss-Timeline, Damage-Meter-Skin, 12 Fenster-Skins. Der Smoke-Test prüft Struktur und Secret-Sicherheit gegen Attrappen, nicht das Verhalten des Clients.
+
+**Wichtigste Prüfungen im Spiel, in dieser Reihenfolge**
+1. Start ohne Lua-Fehler (`/console scriptErrors 1`), dann mit `addonCombatRestrictionsForced 1`, `addonEncounterRestrictionsForced 1`, `addonMapRestrictionsForced 1`.
+2. Taint: `ADDON_ACTION_BLOCKED` und `taint.log` nach Edit Mode, Fenster öffnen im Kampf, Zielwechsel im Kampf.
+3. Auren: Container als Kind eines `SecureUnitButton` ohne Fehler "implicitly gain Forbidden Aspects"; Auren erscheinen im Kampf (V03).
+4. Casts: `SetTimerDuration` mit fremden Casts (geheime Duration), Reihenfolge INTERRUPTED vor STOP, `castBarID` je Cast eindeutig (V02).
+5. Timeline: `overrideViewType = None` hält über Edit Mode; `GetEventTimer` an `SetTimerDuration`; mit BigWigs in `enhanced`, `blizzbars`, `blizztimeline` (V08, Punkt 5).
+6. Cooldown Manager: Items am Halter nach Edit Mode, Layout- und Spezwechsel, Kampfbeginn bei "nur im Kampf" (V07).
+7. Damage-Meter-Skin im und nach dem Kampf, alle vier Blizzard-Stile (V11).
+8. Skins: je Fenster öffnen, Kontrast prüfen (Pergament, Marmor, Item-Slots), Schalter aus + `/reload` (V13a–f).
+9. Frame-Extras: Klassenressourcen aller Klassen, Rollen-Icon mit geheimem Atlas, Heilvorhersage-Anker (V04).
+
+**Bekannte Lücken**
+- `Skins/Common.lua` enthält sechs Fassungen derselben Helfer (Suffixe `_a` bis `_e`) und 680 Zeilen. Konsolidierung steht aus.
+- Nicht gestylt (bewusst): neues Menü-System (WoWUIBugs #826), Scrollbars und Checkboxen in den meisten Fenstern, Listenzeilen mit Pool-Frames.
+- Nicht gebaut: Party, Raid, Nameplates, Inventar, Aktionsleisten, Optionen, Profile, BigWigs-Quelle, Lokalisierung.
+
 ## Performance-Befund
 - `OnUpdate` pro Frame summiert sich bei hohen Frameraten, Timer oder Schwellen sind besser.
 - Größter Hebel: Rendern an die Engine geben (`SetTimerDuration`, Duration-Objekte, Interpolation von `SetValue`).
