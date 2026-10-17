@@ -4,6 +4,7 @@ SLASH_BOROMETER1 = "/borometer"
 SLASH_BOROMETER2 = "/bm"
 
 local help = {
+    "/bm ring [demo] - Auswertung (Glutring) zeigen, demo = Testdaten",
     "/bm unlock - Frames verschieben an/aus",
     "/bm module <name> on|off - Modul schalten",
     "/bm modules - Module auflisten",
@@ -16,6 +17,8 @@ SlashCmdList.BOROMETER = function(msg)
     cmd = (cmd or ""):lower()
     if cmd == "unlock" then
         ns.Mover:Toggle()
+    elseif cmd == "ring" and ns.Ring then
+        ns.Ring:Toggle(a == "demo")
     elseif cmd == "resetpos" then
         ns.Mover:ResetAll()
     elseif cmd == "reset" then

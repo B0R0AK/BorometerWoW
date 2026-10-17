@@ -22,6 +22,8 @@ Theme.color = {
 Theme.font = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 Theme.bar = "Interface\\Buttons\\WHITE8X8"
 Theme.edge = "Interface\\Buttons\\WHITE8X8"
+Theme.ring = "Interface\\AddOns\\Borometer\\Media\\ring.tga"
+Theme.glow = "Interface\\AddOns\\Borometer\\Media\\glow.tga"
 Theme.fontSize = { small = 10, normal = 12, large = 14 }
 Theme.pad = 2
 

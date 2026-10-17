@@ -18,8 +18,10 @@ Borometer/                das Addon (wird gezippt)
   Skins/Common.lua        Frame/Button-Helfer für Skins
   Modules/
     DamageMeterSkin/      Blizzards DamageMeter im Borometer-Design (fertig, ungetestet im Spiel)
-    (geplant) History, Ring, Breakdown, Live, Optionen, siehe docs/vorhaben/BACKLOG.md
-tools/                    check.sh, Smoke-Test, Referenzen
+    Data/                 Sitzung nach dem Kampf als Klartext-Snapshot (`ns.Data`), Teil von M02
+    Ring/                 Glutring-Auswertung (Cooldown-Swipes, Halo-Animation), Teil von M03/M04
+    (geplant) History, Breakdown, Live, Optionen, siehe docs/vorhaben/BACKLOG.md
+tools/                    check.sh, Smoke-Test, Referenzen, gen-media.py (Ring-Texturen)
 ```
 
 ## Datenquelle: `C_DamageMeter`

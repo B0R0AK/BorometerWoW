@@ -303,4 +303,70 @@ test("dmskin: secondary windows and spell rows created later", function()
     assert(DMS._hooked[spell] and hookCount[spell] == 2)
 end)
 
+-- data + ring -------------------------------------------------------------------
+local sessions, now = {}, 1000
+function GetTime() return now end
+function time() return now end
+Enum.DamageMeterType = { DamageDone = 0, HealingDone = 1 }
+Enum.DamageMeterSessionType = { Overall = 0, Current = 1, Expired = 2 }
+local available = { { sessionID = 3, name = "Boss" }, { sessionID = 7, name = "Trash" } }
+C_DamageMeter = {
+    IsDamageMeterAvailable = function() return true end,
+    GetAvailableCombatSessions = function() return available end,
+    GetCombatSessionFromID = function(id, meterType) return sessions[id] and sessions[id][meterType] end,
+    GetCombatSessionFromType = function() return nil end,
+}
+local function src(name, class, amount, secretName)
+    return { name = secretName and S.secret("name", "string") or name, classFilename = class, totalAmount = amount,
+        amountPerSecond = amount / 10, isLocalPlayer = name == "B" }
+end
+local function endCombat()
+    S.inCombat = false
+    S.fire("PLAYER_REGEN_ENABLED")
+    S.runTimers()
+end
+
+test("data: finished fight is copied, sorted, newest session wins", function()
+    sessions[7] = { [0] = { totalAmount = 600, durationSeconds = 10, combatSources = {
+        src("A", "MAGE", 100), src("B", "ROGUE", 300), src("C", "MAGE", 200, true) } } }
+    endCombat()
+    local snap = ns.Data:Latest()
+    assert(snap and snap.name == "Trash", "no snapshot")
+    local d = snap.types.damage
+    assert(d.total == 600 and #d.sources == 3 and d.sources[1].amount == 300 and d.sources[1].isPlayer)
+    assert(d.sources[2].name == nil and d.sources[2].class == "MAGE")
+    assert(snap.types.healing == nil)
+end)
+
+test("ring: auto shows, arcs are cumulative and nested", function()
+    local f = BorometerRingFrame
+    assert(f and f.shown)
+    local arcs = {}
+    for _, w in ipairs(S.frames) do if w.kind == "Cooldown" and w.cd then arcs[#arcs + 1] = w end end
+    assert(#arcs == 3, "arcs " .. #arcs)
+    local function frac(w) return (now - w.cd[1]) / w.cd[2] end
+    assert(math.abs(frac(arcs[1]) - 0.5) < 1e-6 and math.abs(frac(arcs[2]) - 5 / 6) < 1e-6 and frac(arcs[3]) > 0.999)
+end)
+
+test("data: secret session is skipped without error", function()
+    sessions[7][0] = { totalAmount = S.secret("total"), durationSeconds = 10, combatSources = {} }
+    local before = #S.timers
+    S.inCombat = false
+    S.fire("PLAYER_REGEN_ENABLED")
+    S.runTimers(); S.runTimers(); S.runTimers()  -- first try plus both retries
+    assert(ns.Data:Latest().types.damage.total == 600, "kept previous snapshot")
+end)
+
+test("data: no capture in combat, demo snapshot renders both tabs", function()
+    S.inCombat = true
+    assert(ns.Data:Capture() == false)
+    S.inCombat = false
+    ns.Ring:Toggle(true)
+    assert(ns.Data:Latest().demo)
+    ns.Config:Get("ring").type = "healing"
+    ns.Ring:Refresh()
+    ns.Config:Get("ring").type = "damage"
+    ns.Ring:Refresh()
+end)
+
 print(("OK %d tests"):format(passed))

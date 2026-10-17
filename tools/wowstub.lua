@@ -55,6 +55,8 @@ function widget:IsProtected() return self.protected == true end
 function widget:SetAlpha(a) self.alpha = a end
 function widget:SetFont(font, size, flags) self.font = { font, size, flags } end
 function widget:SetSpriteSheetCell(cell) self.cell = cell end
+function widget:SetCooldown(start, dur) self.cd = { start, dur } end
+function widget:SetSwipeColor(r, g, b, a) self.swipe = { r, g, b, a } end
 function widget:SetAtlas(a) self.atlas = a end
 function widget:SetStatusBarDesaturated(v) self.desaturated = v end
 function widget:SetStatusBarColor(r, g, b) self.color = { r, g, b } end

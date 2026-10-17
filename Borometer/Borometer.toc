@@ -23,3 +23,7 @@ Skins\Common.lua
 
 Modules\DamageMeterSkin\Entries.lua
 Modules\DamageMeterSkin\DamageMeterSkin.lua
+
+Modules\Data\Data.lua
+
+Modules\Ring\Ring.lua

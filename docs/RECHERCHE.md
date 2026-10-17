@@ -96,3 +96,12 @@ Gebaut: Cast-Balken, Auren (AuraContainer), Frame-Extras, Cooldown Manager, Boss
 - `OnUpdate` pro Frame summiert sich bei hohen Frameraten, Timer oder Schwellen sind besser.
 - Größter Hebel: Rendern an die Engine geben (`SetTimerDuration`, Duration-Objekte, Interpolation von `SetValue`).
 - Gemessen wird, nicht geglaubt (`ns.Debug.Profile`, `GetAddOnCPUUsage`).
+
+## Glutring (Data, Ring): im Spiel prüfen
+| # | Frage |
+|---|---|
+| R1 | `Cooldown:SetCooldown(GetTime() - f*100000, 100000)` plus `Pause()` mit `SetSwipeTexture(ring.tga)` und `SetReverse(true)`: zeigt es den Bogen 0..f im Uhrzeigersinn, bleibt er stehen, wird er von OmniCC o. Ä. überlagert? |
+| R2 | Ist die TGA (256x256, 32 Bit, oben links) ohne Rand-Artefakte sichtbar, und passt der Halo (`glow.tga`, ADD) auf den Ring? |
+| R3 | Liefert `GetAvailableCombatSessions()` aufsteigende `sessionID`? (Code nimmt die größte.) Ist die Sitzung 1 s nach `PLAYER_REGEN_ENABLED` schon Klartext (3 Versuche im Abstand 1,5 s)? |
+| R4 | Bleiben `name`/`sourceGUID` in Instanzen nach dem Kampf geheim? Dann zeigt der Ring den Klassennamen. |
+| R5 | Classic ("WoW Forever"): `C_DamageMeter` fehlt dort. Der Ring liest nur `ns.Data`-Snapshots, eine Combat-Log-Quelle für Classic ist noch nicht gebaut. |
