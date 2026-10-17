@@ -22,5 +22,7 @@ Media\Theme.lua
 Skins\Common.lua
 
 Modules\UnitFrames\Elements.lua
+Modules\UnitFrames\Extras.lua
+Modules\UnitFrames\ClassPower.lua
 Modules\UnitFrames\Factory.lua
 Modules\UnitFrames\UnitFrames.lua

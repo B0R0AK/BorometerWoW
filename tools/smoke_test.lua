@@ -72,6 +72,151 @@ test("unit events are unit-filtered", function()
     assert(f.unitEvents.UNIT_HEALTH[1] == "boss3")
 end)
 
+-- frame extras (V04) -----------------------------------------------------------
+local function fireAll(f)
+    f.scripts.OnShow(f)
+    for event in pairs(f.handlers) do f.scripts.OnEvent(f, event, f.unit) end
+end
+
+test("extras: default specs carry the new elements", function()
+    local F = ns.UF.frames
+    assert(F.player.classPower and F.player.roleIcon and F.player.raidMarker)
+    assert(F.target.raidMarker and F.target.levelText)
+    assert(F.focus.raidMarker)
+    local cfg = BoroFrameDB.profiles.Default.unitframes.frames
+    assert(cfg.player.elements[1] == "Health" and cfg.player.elements[6] == "ClassPower")
+end)
+
+local xf = ns.UF.Create("extrasTest", { unit = "party1", w = 120, h = 24, powerHeight = 0,
+    elements = { "Health", "Absorb", "HealPrediction", "Status", "Leader", "PvP", "Level", "RaidMarker", "Role" } })
+
+test("extras: secret values reach widgets untouched", function()
+    fireAll(xf)
+    for _, e in ipairs({ "RAID_TARGET_UPDATE", "GROUP_ROSTER_UPDATE", "PARTY_LEADER_CHANGED", "PLAYER_ROLES_ASSIGNED" }) do
+        S.fire(e)
+    end
+    assert(issecretvalue(xf.healPred.value) and issecretvalue(xf.healPred.max), "heal prediction")
+    assert(issecretvalue(xf.raidMarker.cell) and xf.raidMarker.shown, "raid marker")
+    assert(issecretvalue(xf.leaderIcon.alphaBool) and issecretvalue(xf.assistIcon.alphaBool), "leader")
+    assert(issecretvalue(xf.roleIcon.alphaBool) and issecretvalue(xf.roleIcon.atlas), "role")
+    assert(S.pvpUpdated == xf.pvpIcon, "pvp via UnitFrameUtil")
+    assert(issecretvalue(xf.levelText.formatted[2]), "secret level passed through")
+end)
+
+test("extras: two elements sharing a global event both update", function()
+    xf.leaderIcon.alphaBool, xf.roleIcon.alphaBool = nil, nil
+    S.fire("GROUP_ROSTER_UPDATE")
+    assert(xf.leaderIcon.alphaBool and xf.roleIcon.alphaBool)
+end)
+
+test("extras: raid marker hides without index", function()
+    S.raidIndex = false
+    S.fire("RAID_TARGET_UPDATE")
+    assert(xf.raidMarker.shown == false)
+    S.raidIndex = 8
+    S.fire("RAID_TARGET_UPDATE")
+    assert(xf.raidMarker.shown and xf.raidMarker.cell == 8)
+    S.raidIndex = nil
+end)
+
+test("extras: role falls back without UnitFrameUtil and hides on secret role", function()
+    local util = UnitFrameUtil
+    UnitFrameUtil = nil
+    xf.scripts.OnShow(xf)
+    assert(xf.roleIcon.alpha == 0)
+    UnitFrameUtil = util
+end)
+
+test("extras: dead/offline state", function()
+    S.dead = true
+    xf.scripts.OnShow(xf)
+    assert(xf.statusText.text == DEAD or xf.statusText.text == "Dead")
+    assert(xf.health.desaturated == true)
+    S.dead, S.online = false, false
+    xf.scripts.OnEvent(xf, "UNIT_CONNECTION", "party1")
+    assert(xf.statusText.text == "Offline" or xf.statusText.text == PLAYER_OFFLINE)
+    S.online = nil
+    xf.scripts.OnEvent(xf, "UNIT_HEALTH", "party1")
+    assert(xf.statusText.text == "" and xf.health.desaturated == false)
+    S.dead = "secret"
+    xf.scripts.OnEvent(xf, "UNIT_HEALTH", "party1")
+    assert(issecretvalue(xf.health.desaturated), "secret dead flag goes to the bar")
+    S.dead = nil
+end)
+
+test("extras: plain level with elite marker", function()
+    S.level = 83
+    xf.scripts.OnEvent(xf, "UNIT_LEVEL", "party1")
+    assert(xf.levelText.formatted[1] == "%d%s" and xf.levelText.formatted[2] == 83 and xf.levelText.formatted[3] == "+")
+    S.level = -1
+    xf.scripts.OnEvent(xf, "UNIT_LEVEL", "party1")
+    assert(xf.levelText.text == "??")
+    S.level = nil
+end)
+
+test("extras: class power for every class, secret current and secret max", function()
+    local p = ns.UF.frames.player
+    local cases = {
+        { "ROGUE" }, { "PALADIN" }, { "WARLOCK" }, { "EVOKER" }, { "DEATHKNIGHT" },
+        { "MONK", 3 }, { "MAGE", 1 }, { "DRUID", nil, 3 },
+    }
+    for _, plainMax in ipairs({ false, 5 }) do
+        S.plainMax = plainMax or nil
+        for _, c in ipairs(cases) do
+            S.class, S.spec, S.powerType = c[1], c[2], c[3]
+            p.scripts.OnEvent(p, "PLAYER_ENTERING_WORLD")
+            assert(p.classPower.shown, c[1] .. " class power hidden")
+            fireAll(p)
+            S.fire("RUNE_POWER_UPDATE", 1, true)
+            S.fire("PLAYER_SPECIALIZATION_CHANGED", "player")
+            if c[1] ~= "DEATHKNIGHT" then
+                assert(issecretvalue(p.cpPips[1].value), c[1] .. " secret power not passed")
+            end
+        end
+    end
+    -- off-spec and caster-form cases hide the bar
+    S.class, S.spec = "MONK", 1
+    p.scripts.OnEvent(p, "PLAYER_ENTERING_WORLD")
+    assert(p.classPower.shown == false)
+    S.class, S.powerType = "DRUID", 0
+    p.scripts.OnEvent(p, "UNIT_DISPLAYPOWER", "player")
+    assert(p.classPower.shown == false)
+    S.class, S.spec, S.powerType = nil, nil, nil
+    p.scripts.OnEvent(p, "PLAYER_ENTERING_WORLD")
+    assert(p.classPower.shown == false, "secret class token must hide")
+end)
+
+test("extras: class power pip ranges, shards display mod, runes, essence fallback", function()
+    local p = ns.UF.frames.player
+    S.plainMax = nil
+    S.class = "ROGUE"
+    p.scripts.OnEvent(p, "PLAYER_ENTERING_WORLD")
+    assert(p.cpCount == 1 and issecretvalue(p.cpPips[1].max), "secret max: one continuous bar")
+
+    S.plainMax = 7
+    p.scripts.OnEvent(p, "UNIT_MAXPOWER", "player")
+    assert(p.cpCount == 7 and p.cpPips[7].min == 6 and p.cpPips[7].max == 7 and p.cpPips[8].shown == false)
+
+    S.class, S.plainMax = "WARLOCK", 5  -- 5 shards, pips scaled by display mod 10 for unmodified values
+    p.scripts.OnEvent(p, "PLAYER_ENTERING_WORLD")
+    assert(p.cpCount == 5 and p.cpPips[2].min == 10 and p.cpPips[2].max == 20)
+
+    S.class, S.plainMax = "DEATHKNIGHT", nil
+    p.scripts.OnEvent(p, "PLAYER_ENTERING_WORLD")
+    assert(p.cpCount == 6 and issecretvalue(p.cpDurations[6].start) and p.cpPips[6].timer == p.cpDurations[6])
+
+    S.class, S.plainMax, S.plainPower, S.partial = "EVOKER", 5, 2, 500
+    p.scripts.OnEvent(p, "PLAYER_ENTERING_WORLD")
+    assert(p.cpPips[3].value == 2.5, "partial essence")
+    S.partial = nil  -- secret partial (bug #420 path): whole pips only
+    p.scripts.OnEvent(p, "UNIT_POWER_FREQUENT", "player", "ESSENCE")
+    assert(p.cpPips[3].value == 2)
+    S.plainPower = 3
+    p.scripts.OnEvent(p, "UNIT_POWER_FREQUENT", "player", "MANA")
+    assert(p.cpPips[3].value == 2, "foreign power token must be ignored")
+    S.class, S.plainMax, S.plainPower = nil, nil, nil
+end)
+
 -- events ----------------------------------------------------------------------
 test("events: dispatch, unregister during dispatch, compaction", function()
     local owner1, owner2, calls = {}, {}, {}

@@ -3,19 +3,25 @@ local _, ns = ...
 local UF = ns.UF
 local M = ns:NewModule("UnitFrames")
 
-local FULL = { "Health", "Absorb", "Power", "Name", "HealthText" }
+-- Element lists are copied per frame. Saved profiles are filled additively by index, so new elements
+-- are appended at the end and existing profiles pick them up without a migration.
+local function list(...)
+    local t = { "Health", "Absorb", "Power", "Name", "HealthText" }
+    for i = 1, select("#", ...) do t[#t + 1] = select(i, ...) end
+    return t
+end
 local SMALL = { "Health", "Name" }
 
 -- Defaults double as the frame list. pos = { point, x, y } relative to the screen center.
 local defaults = {
     frames = {
-        player = { unit = "player", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110, elements = FULL,
-            pos = { "CENTER", -320, -200 } },
-        target = { unit = "target", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110, elements = FULL,
-            refreshOn = { "PLAYER_TARGET_CHANGED" }, pos = { "CENTER", 320, -200 } },
+        player = { unit = "player", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110,
+            elements = list("ClassPower", "Role", "RaidMarker"), pos = { "CENTER", -320, -200 } },
+        target = { unit = "target", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110,
+            elements = list("RaidMarker", "Level"), refreshOn = { "PLAYER_TARGET_CHANGED" }, pos = { "CENTER", 320, -200 } },
         targettarget = { unit = "targettarget", w = 140, h = 24, elements = SMALL,
             refreshOn = { "UNIT_TARGET", "PLAYER_TARGET_CHANGED" }, poll = 0.25, pos = { "CENTER", 520, -250 } },
-        focus = { unit = "focus", w = 180, h = 30, powerHeight = 3, elements = { "Health", "Power", "Name" },
+        focus = { unit = "focus", w = 180, h = 30, powerHeight = 3, elements = { "Health", "Power", "Name", "RaidMarker" },
             refreshOn = { "PLAYER_FOCUS_CHANGED" }, pos = { "CENTER", -520, -250 } },
     },
     hideBlizzard = true,

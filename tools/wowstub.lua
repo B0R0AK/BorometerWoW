@@ -7,7 +7,9 @@ local widget = {}
 widget.__index = function(t, k)
     local m = rawget(widget, k)
     if m then return m end
-    return function() end  -- every other widget method is a no-op
+    -- Every other widget method (CamelCase) is a no-op. Lowercase keys are addon fields and read as nil,
+    -- like on a real frame.
+    if type(k) == "string" and k:match("^%u") then return function() end end
 end
 
 function widget:SetScript(name, fn) self.scripts[name] = fn end
@@ -34,6 +36,13 @@ function widget:SetText(t) self.text = t end
 function widget:SetFormattedText(f, ...) self.formatted = { f, ... } end
 function widget:SetValue(v) self.value = v end
 function widget:SetMinMaxValues(a, b) self.min, self.max = a, b end
+function widget:GetStatusBarTexture() self.fill = self.fill or S.newWidget(); return self.fill end
+function widget:SetSpriteSheetCell(cell) self.cell = cell end
+function widget:SetAlphaFromBoolean(v) self.alphaBool = v end
+function widget:SetAlpha(a) self.alpha = a end
+function widget:SetAtlas(a) self.atlas = a end
+function widget:SetTimerDuration(d) self.timer = d end
+function widget:SetStatusBarDesaturated(v) self.desaturated = v end
 
 function S.newWidget()
     return setmetatable({ scripts = {}, hooks = {}, events = {}, unitEvents = {}, attr = {}, shown = true, watched = false }, widget)
@@ -92,19 +101,56 @@ RAID_CLASS_COLORS = { WARRIOR = { r = .78, g = .61, b = .43 } }
 FACTION_BAR_COLORS = { [4] = { r = 1, g = 1, b = 0 } }
 PowerBarColor = { MANA = { r = 0, g = 0, b = 1 } }
 CurveConstants = { ScaleTo100 = {} }
-Enum = { StatusBarInterpolation = { Immediate = 0, ExponentialEaseOut = 1 } }
+Enum = { StatusBarInterpolation = { Immediate = 0, ExponentialEaseOut = 1 },
+    PowerType = { Mana = 0, Energy = 3, ComboPoints = 4, Runes = 5, SoulShards = 7, HolyPower = 9, Chi = 12,
+        ArcaneCharges = 16, Essence = 19 } }
 C_StringUtil = { CreateAbbreviatedNumberFormatter = function()
     return { FormatNumber = function(_, v) assert(issecretvalue(v) or type(v) == "number"); return "1.2M" end }
 end }
 function UnitHealth() return S.secret("hp") end
 function UnitHealthMax() return S.secret("maxhp") end
-function UnitPower() return S.secret("pow") end
-function UnitPowerMax() return S.secret("maxpow") end
+function UnitPower(_, ptype) if ptype and S.plainPower then return S.plainPower end return S.secret("pow") end
+function UnitPowerMax(_, ptype) if ptype and S.plainMax then return S.plainMax end return S.secret("maxpow") end
 function UnitGetTotalAbsorbs() return S.secret("absorb") end
 function UnitIsPlayer() return S.secret("isplayer") end
-function UnitClass() return "Warrior", S.secret("class") end
+function UnitClass(unit)
+    if unit == "player" and S.class then return S.class, S.class end
+    return "Warrior", S.secret("class")
+end
 function UnitReaction() return S.secret("reaction") end
-function UnitPowerType() return 0, S.secret("powertoken") end
+function UnitPowerType() return S.powerType or 0, S.secret("powertoken") end
 function UnitHealthPercent() return 73.4 end
 function AbbreviateNumbers(v) assert(issecretvalue(v) or type(v) == "number"); return "1.2M" end
 function UnitName(unit) if unit == "player" then return "Tester" end return S.secret("name") end
+
+-- Frame extras (V04). Identity-restricted flags and incoming heals are secret, like on an instance map.
+function UnitGetIncomingHeals() return S.secret("incheal") end
+function GetRaidTargetIndex() if S.raidIndex ~= nil then return S.raidIndex or nil end return S.secret("raidindex") end
+function UnitGroupRolesAssigned() return S.secret("role") end
+function UnitIsGroupLeader() return S.secret("leader") end
+function UnitIsGroupAssistant() return S.secret("assist") end
+function UnitIsPVP() return S.secret("pvp") end
+function UnitIsPVPFreeForAll() return S.secret("ffa") end
+function UnitFactionGroup() return "Horde", "Horde" end
+function UnitIsDeadOrGhost() if S.dead == "secret" then return S.secret("dead") end return S.dead or false end
+function UnitIsConnected() return S.online ~= false end
+function UnitEffectiveLevel(unit)
+    if unit == "player" then return 80 end
+    if S.level then return S.level end
+    return S.secret("level")
+end
+function UnitClassification() return "elite" end
+function UnitPartialPower() if S.partial then return S.partial end return S.secret("partial") end
+function UnitPowerDisplayMod() return 10 end
+function GetRuneCooldown() return S.secret("runestart"), S.secret("runedur"), S.secret("runeready") end
+C_DurationUtil = { CreateDuration = function()
+    return { SetTimeFromStart = function(self, start, dur) self.start, self.dur = start, dur end }
+end }
+C_SpecializationInfo = { GetSpecialization = function() return S.spec or 1 end }
+UnitFrameUtil = {
+    GetUnitRoleIconDisplayInfo = function(_, options)
+        assert(options.displayRoleIcon)
+        return { roleIconTexture = S.secret("roletex"), showRoleIcon = S.secret("showrole"), iconWidth = S.secret("w") }
+    end,
+    UpdateUnitPvPIndicator = function(elements) S.pvpUpdated = elements.pvpIcon end,
+}
