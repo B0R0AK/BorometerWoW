@@ -45,5 +45,6 @@ Skins\Reputation.lua
 Skins\Currency.lua
 
 Modules\UnitFrames\Elements.lua
+Modules\UnitFrames\Cast.lua
 Modules\UnitFrames\Factory.lua
 Modules\UnitFrames\UnitFrames.lua

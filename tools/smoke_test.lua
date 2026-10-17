@@ -72,6 +72,105 @@ test("unit events are unit-filtered", function()
     assert(f.unitEvents.UNIT_HEALTH[1] == "boss3")
 end)
 
+-- cast bar ----------------------------------------------------------------------
+local function fireUnit(frame, event, ...) frame.scripts.OnEvent(frame, event, frame.unit, ...) end
+
+test("cast: element on player, target, focus, boss1-5, unit-filtered events", function()
+    for _, n in ipairs({ "player", "target", "focus", "boss1", "boss2", "boss3", "boss4", "boss5" }) do
+        local f = ns.UF.frames[n]
+        assert(rawget(f, "castHolder"), n .. " has no cast bar")
+        for _, e in ipairs({ "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED",
+            "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_DELAYED", "UNIT_SPELLCAST_CHANNEL_START",
+            "UNIT_SPELLCAST_CHANNEL_STOP", "UNIT_SPELLCAST_CHANNEL_UPDATE", "UNIT_SPELLCAST_INTERRUPTIBLE",
+            "UNIT_SPELLCAST_NOT_INTERRUPTIBLE", "UNIT_SPELLCAST_EMPOWER_START", "UNIT_SPELLCAST_EMPOWER_UPDATE",
+            "UNIT_SPELLCAST_EMPOWER_STOP" }) do
+            assert(f.unitEvents[e] and f.unitEvents[e][1] == f.unit, n .. " " .. e)
+        end
+    end
+    assert(rawget(ns.UF.frames.targettarget, "castHolder") == nil)
+end)
+
+test("cast: blizzard player cast bar detached", function()
+    assert(rawget(PlayerCastingBarFrame, "unit") == nil)
+end)
+
+test("cast: secret cast goes to widgets untouched, stop hides", function()
+    local f = ns.UF.frames.target
+    S.casts.target = { kind = "cast", castBarID = 7 }
+    fireUnit(f, "UNIT_SPELLCAST_START", S.secret("guid", "string"), S.secret("spell"), 7)
+    assert(f.castHolder.shown)
+    local d, _, dir = unpack(f.castBar.timer)
+    assert(issecretvalue(d) and dir == Enum.StatusBarTimerDirection.ElapsedTime)
+    assert(issecretvalue(f.castText.text) and issecretvalue(f.castIcon.texture))
+    assert(issecretvalue(f.castFill.colorBool[1]) and issecretvalue(f.castShield.alphaBool[1]))
+    fireUnit(f, "UNIT_SPELLCAST_DELAYED", S.secret("guid", "string"), S.secret("spell"), 7)
+    assert(f.castBar.timer[2] == ns.UF.interp)
+    fireUnit(f, "UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+    assert(f.castFill.colorBool[1] == true and f.castShield.alphaBool[1] == true)
+    fireUnit(f, "UNIT_SPELLCAST_INTERRUPTIBLE")
+    assert(f.castFill.colorBool[1] == false)
+    S.casts.target = nil
+    fireUnit(f, "UNIT_SPELLCAST_STOP", S.secret("guid", "string"), S.secret("spell"), 7)
+    assert(not f.castHolder.shown)
+end)
+
+test("cast: channel drains, empower fills with hold time", function()
+    local f = ns.UF.frames.boss2
+    S.casts.boss2 = { kind = "channel", castBarID = 3 }
+    fireUnit(f, "UNIT_SPELLCAST_CHANNEL_START", S.secret("guid", "string"), S.secret("spell"), 3)
+    assert(f.castHolder.shown and f.castBar.timer[3] == Enum.StatusBarTimerDirection.RemainingTime)
+    fireUnit(f, "UNIT_SPELLCAST_CHANNEL_UPDATE", S.secret("guid", "string"), S.secret("spell"), 3)
+    S.casts.boss2 = nil
+    fireUnit(f, "UNIT_SPELLCAST_CHANNEL_STOP", S.secret("guid", "string"), S.secret("spell"), nil, 3)
+    assert(not f.castHolder.shown)
+
+    local p = ns.UF.frames.player
+    S.casts.player = { kind = "empower", castBarID = 4 }
+    fireUnit(p, "UNIT_SPELLCAST_EMPOWER_START", "guid", 1, 4)
+    assert(p.castHolder.shown and p.castBar.timer[3] == Enum.StatusBarTimerDirection.ElapsedTime)
+    S.casts.player = nil
+    fireUnit(p, "UNIT_SPELLCAST_EMPOWER_STOP", "guid", 1, S.secret("complete", "boolean"), nil, 4)
+    assert(not p.castHolder.shown)
+end)
+
+test("cast: interrupt holds, foreign FAILED ignored, release refreshes", function()
+    local f = ns.UF.frames.focus
+    S.casts.focus = { kind = "cast", castBarID = 11 }
+    fireUnit(f, "UNIT_SPELLCAST_START", S.secret("guid", "string"), S.secret("spell"), 11)
+    -- key pressed while casting: FAILED for another cast attempt
+    fireUnit(f, "UNIT_SPELLCAST_FAILED", S.secret("guid", "string"), S.secret("spell"), 12)
+    assert(f.castHolder.shown and not f.castFail.shown)
+    fireUnit(f, "UNIT_SPELLCAST_INTERRUPTED", S.secret("guid", "string"), S.secret("spell"),
+        S.secret("kicker", "string"), 11)
+    S.casts.focus = nil
+    fireUnit(f, "UNIT_SPELLCAST_STOP", S.secret("guid", "string"), S.secret("spell"), 11)
+    assert(f.castHolder.shown and f.castFail.shown and f.castText.text == INTERRUPTED)
+    S.runTimers()
+    assert(not f.castHolder.shown)
+    -- secret interruptedBy on a channel stop
+    S.casts.focus = { kind = "channel", castBarID = 13 }
+    fireUnit(f, "UNIT_SPELLCAST_CHANNEL_START", S.secret("guid", "string"), S.secret("spell"), 13)
+    S.casts.focus = nil
+    fireUnit(f, "UNIT_SPELLCAST_CHANNEL_STOP", S.secret("guid", "string"), S.secret("spell"),
+        S.secret("kicker", "string"), 13)
+    assert(f.castFail.shown)
+    -- a new cast during the hold replaces the failed state
+    S.casts.focus = { kind = "cast", castBarID = 14 }
+    fireUnit(f, "UNIT_SPELLCAST_START", S.secret("guid", "string"), S.secret("spell"), 14)
+    assert(f.castHolder.shown and not f.castFail.shown)
+    S.runTimers()
+    assert(f.castHolder.shown, "release must keep a running cast")
+    S.casts.focus = nil
+    f.scripts.OnEvent(f, "PLAYER_FOCUS_CHANGED")
+    assert(not f.castHolder.shown)
+end)
+
+test("cast: FAILED without a visible bar is ignored", function()
+    local f = ns.UF.frames.player
+    fireUnit(f, "UNIT_SPELLCAST_FAILED", "guid", 1, 99)
+    assert(not f.castHolder.shown and not f.castFail.shown)
+end)
+
 -- events ----------------------------------------------------------------------
 test("events: dispatch, unregister during dispatch, compaction", function()
     local owner1, owner2, calls = {}, {}, {}
