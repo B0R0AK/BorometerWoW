@@ -127,6 +127,7 @@ function Skin.Dropdown(dropdown)
     Skin.Fade(dropdown.Background)
     local panel = Skin.Panel(dropdown)
     hoverEdge(dropdown, panel)
+end
 
 -- ---------------------------------------------------------------------------
 -- Additions for window skins (tabs, panel art, close button, button art).
@@ -196,6 +197,7 @@ function Skin.PanelTab(tab)
         hooksecurefunc("PanelTemplates_SelectTab", syncTab)
         hooksecurefunc("PanelTemplates_DeselectTab", syncTab)
     end
+end
 
 -- V13b additions: panels, close buttons, tabs, flat fills. ---------------------------------
 -- These never write into Blizzard frame tables: the backdrop lives on our own child frame.
