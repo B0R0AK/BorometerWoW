@@ -46,6 +46,8 @@ Skins\Currency.lua
 
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Cast.lua
+Modules\UnitFrames\Extras.lua
+Modules\UnitFrames\ClassPower.lua
 Modules\UnitFrames\Factory.lua
 Modules\UnitFrames\UnitFrames.lua
 Modules\UnitFrames\Auras.lua

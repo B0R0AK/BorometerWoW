@@ -3,7 +3,13 @@ local _, ns = ...
 local UF = ns.UF
 local M = ns:NewModule("UnitFrames")
 
-local FULL = { "Health", "Absorb", "Power", "Name", "HealthText", "Cast", "Auras" }
+-- Element lists are copied per frame. Saved profiles are filled additively by index, so new elements
+-- are appended at the end and existing profiles pick them up without a migration.
+local function list(...)
+    local t = { "Health", "Absorb", "Power", "Name", "HealthText" }
+    for i = 1, select("#", ...) do t[#t + 1] = select(i, ...) end
+    return t
+end
 local SMALL = { "Health", "Name" }
 
 -- Aura rows above the frame, growing up: own debuffs nearest the frame, buffs above.
@@ -20,13 +26,16 @@ end
 -- Defaults double as the frame list. pos = { point, x, y } relative to the screen center.
 local defaults = {
     frames = {
-        player = { unit = "player", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110, elements = FULL,
+        player = { unit = "player", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110,
+            elements = list("Cast", "Auras", "ClassPower", "Role", "RaidMarker"),
             auras = bigAuras(false), pos = { "CENTER", -320, -200 } },
-        target = { unit = "target", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110, elements = FULL,
-            auras = bigAuras(true), refreshOn = { "PLAYER_TARGET_CHANGED" }, pos = { "CENTER", 320, -200 } },
+        target = { unit = "target", w = 260, h = 46, powerHeight = 5, healthTextWidth = 110,
+            elements = list("Cast", "Auras", "RaidMarker", "Level"), auras = bigAuras(true),
+            refreshOn = { "PLAYER_TARGET_CHANGED" }, pos = { "CENTER", 320, -200 } },
         targettarget = { unit = "targettarget", w = 140, h = 24, elements = SMALL,
             refreshOn = { "UNIT_TARGET", "PLAYER_TARGET_CHANGED" }, poll = 0.25, pos = { "CENTER", 520, -250 } },
-        focus = { unit = "focus", w = 180, h = 30, powerHeight = 3, elements = { "Health", "Power", "Name", "Cast" },
+        focus = { unit = "focus", w = 180, h = 30, powerHeight = 3,
+            elements = { "Health", "Power", "Name", "Cast", "RaidMarker" },
             castHeight = 14, refreshOn = { "PLAYER_FOCUS_CHANGED" }, pos = { "CENTER", -520, -250 } },
     },
     hideBlizzard = true,
