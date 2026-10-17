@@ -27,6 +27,10 @@ Skins\Chat.lua
 Skins\Friends.lua
 Skins\Communities.lua
 Skins\GroupFinder.lua
+Skins\PlayerSpells.lua
+Skins\SpellBook.lua
+Skins\Talents.lua
+Skins\Professions.lua
 
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Factory.lua

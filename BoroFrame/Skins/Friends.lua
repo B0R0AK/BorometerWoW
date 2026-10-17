@@ -14,7 +14,7 @@ ns.Skin:Register("FriendsList", "Blizzard_FriendsFrame", function()
     local frame = FriendsFrame
     if not frame then return end
     Skin.Window(frame)
-    for i = 1, 4 do Skin.Tab(_G["FriendsFrameTab" .. i]) end
+    for i = 1, 4 do Skin.PanelTab(_G["FriendsFrameTab" .. i]) end
     for _, name in ipairs(BUTTONS) do Skin.ActionButton(_G[name]) end
     Skin.Inset(WhoFrameListInset)
 

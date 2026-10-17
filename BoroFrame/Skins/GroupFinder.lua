@@ -9,7 +9,7 @@ ns.Skin:Register("GroupFinder", "Blizzard_GroupFinder", function()
     if not frame then return end
     Skin.Window(frame)
     if frame.shadows then frame.shadows:SetAlpha(0) end
-    for i = 1, 3 do Skin.Tab(_G["PVEFrameTab" .. i]) end
+    for i = 1, 3 do Skin.PanelTab(_G["PVEFrameTab" .. i]) end
 
     local list = LFGListFrame
     if list then
