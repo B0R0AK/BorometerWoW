@@ -1,0 +1,24 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: bash tools/check.sh
+      - name: Verify tag matches TOC version
+        run: |
+          toc=$(grep -m1 '^## Version:' BoroFrame/BoroFrame.toc | awk '{print $3}')
+          [ "v$toc" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != toc v$toc"; exit 1; }
+      - run: zip -r "BoroFrame-${GITHUB_REF_NAME}.zip" BoroFrame -x "BoroFrame/Skins/_Template.lua"
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: BoroFrame-*.zip
+          generate_release_notes: false
+          body_path: CHANGELOG.md

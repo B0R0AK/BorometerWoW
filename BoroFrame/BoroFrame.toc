@@ -1,0 +1,26 @@
+## Interface: 120005
+## Title: BoroFrame
+## Notes: Komplettes Retail-UI: Unit Frames, Gruppen, Cooldown Manager, Boss-Timeline, Nameplates, Skins.
+## Author: B0R0AK
+## Version: 0.1.0
+## SavedVariables: BoroFrameDB
+## X-Website: https://github.com/B0R0AK/BoroFrame
+
+Core\Init.lua
+Core\Debug.lua
+Core\Events.lua
+Core\Scheduler.lua
+Core\Pool.lua
+Core\Combat.lua
+Core\Config.lua
+Core\Mover.lua
+Core\Skin.lua
+Core\Slash.lua
+
+Media\Theme.lua
+
+Skins\Common.lua
+
+Modules\UnitFrames\Elements.lua
+Modules\UnitFrames\Factory.lua
+Modules\UnitFrames\UnitFrames.lua
