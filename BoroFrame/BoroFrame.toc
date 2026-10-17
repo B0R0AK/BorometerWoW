@@ -48,6 +48,7 @@ Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Cast.lua
 Modules\UnitFrames\Factory.lua
 Modules\UnitFrames\UnitFrames.lua
+Modules\UnitFrames\Auras.lua
 
 Modules\DamageMeterSkin\Entries.lua
 Modules\DamageMeterSkin\DamageMeterSkin.lua
