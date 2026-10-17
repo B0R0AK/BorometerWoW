@@ -37,6 +37,8 @@ Skins\Gossip.lua
 Skins\Merchant.lua
 Skins\Mail.lua
 Skins\ObjectiveTracker.lua
+Skins\Collections.lua
+Skins\EncounterJournal.lua
 
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Factory.lua
