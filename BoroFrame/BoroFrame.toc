@@ -23,6 +23,10 @@ Skins\Common.lua
 Skins\Tooltips.lua
 Skins\Popups.lua
 Skins\EditMode.lua
+Skins\Chat.lua
+Skins\Friends.lua
+Skins\Communities.lua
+Skins\GroupFinder.lua
 
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Factory.lua
