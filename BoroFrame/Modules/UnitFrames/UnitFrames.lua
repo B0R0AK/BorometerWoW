@@ -3,7 +3,7 @@ local _, ns = ...
 local UF = ns.UF
 local M = ns:NewModule("UnitFrames")
 
-local FULL = { "Health", "Absorb", "Power", "Name", "HealthText" }
+local FULL = { "Health", "Absorb", "Power", "Name", "HealthText", "Cast" }
 local SMALL = { "Health", "Name" }
 
 -- Defaults double as the frame list. pos = { point, x, y } relative to the screen center.
@@ -15,15 +15,16 @@ local defaults = {
             refreshOn = { "PLAYER_TARGET_CHANGED" }, pos = { "CENTER", 320, -200 } },
         targettarget = { unit = "targettarget", w = 140, h = 24, elements = SMALL,
             refreshOn = { "UNIT_TARGET", "PLAYER_TARGET_CHANGED" }, poll = 0.25, pos = { "CENTER", 520, -250 } },
-        focus = { unit = "focus", w = 180, h = 30, powerHeight = 3, elements = { "Health", "Power", "Name" },
-            refreshOn = { "PLAYER_FOCUS_CHANGED" }, pos = { "CENTER", -520, -250 } },
+        focus = { unit = "focus", w = 180, h = 30, powerHeight = 3, elements = { "Health", "Power", "Name", "Cast" },
+            castHeight = 14, refreshOn = { "PLAYER_FOCUS_CHANGED" }, pos = { "CENTER", -520, -250 } },
     },
     hideBlizzard = true,
     smooth = true,
 }
 for i = 1, 5 do
     defaults.frames["boss" .. i] = { unit = "boss" .. i, w = 200, h = 34, powerHeight = 3, healthTextWidth = 50,
-        elements = { "Health", "Power", "Name", "HealthText" },
+        elements = { "Health", "Power", "Name", "HealthText", "Cast" }, castAnchor = "LEFT", castWidth = 160,
+        castHeight = 18,
         refreshOn = { "INSTANCE_ENCOUNTER_ENGAGE_UNIT" }, pos = { "RIGHT", -60, 120 - (i - 1) * 44 } }
 end
 ns.Config:Register("unitframes", defaults)
