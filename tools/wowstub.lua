@@ -28,23 +28,88 @@ function widget:GetFrameLevel() return 1 end
 function widget:GetNumRegions() return 0 end
 function widget:GetRegions() end
 function widget:IsObjectType() return false end
-function widget:CreateFontString() return S.newWidget() end
-function widget:CreateTexture() return S.newWidget() end
+function widget:CreateFontString() local r = S.newWidget(); r.parent = self; return r end
+function widget:CreateTexture() local r = S.newWidget(); r.parent = self; return r end
+function widget:GetParent() return self.parent end
 function widget:SetText(t) self.text = t end
 function widget:SetFormattedText(f, ...) self.formatted = { f, ... } end
 function widget:SetValue(v) self.value = v end
 function widget:SetMinMaxValues(a, b) self.min, self.max = a, b end
+function widget:SetHideCountdownNumbers(h) self.hideNumbers = h end
 
 function S.newWidget()
     return setmetatable({ scripts = {}, hooks = {}, events = {}, unitEvents = {}, attr = {}, shown = true, watched = false }, widget)
 end
 
-function CreateFrame(kind, name)
+function CreateFrame(kind, name, parent, template)
     local f = S.newWidget()
-    f.kind, f.name = kind, name
+    f.kind, f.name, f.parent, f.template = kind, name, parent, template
     S.frames[#S.frames + 1] = f
     if name then _G[name] = f end
+    if kind == "AuraContainer" then S.initAuraContainer(f) end
     return f
+end
+
+function S.isDescendant(obj, owner)
+    local p = obj.parent
+    while p do
+        if p == owner then return true end
+        p = p.parent
+    end
+    return false
+end
+
+-- AuraContainer / AuraButton (12.1): the engine owns aura data. The stub records the
+-- configuration and enforces Blizzard's rule that display regions descend from the button.
+local auraButton = setmetatable({}, { __index = widget })
+auraButton.__index = function(t, k) return rawget(auraButton, k) or widget.__index(t, k) end
+local function adopt(slot)
+    return function(self, region, options)
+        assert(S.isDescendant(region, self), slot .. ": region must descend from the aura button")
+        self.display[slot] = region
+        self.displayOptions[slot] = options
+    end
+end
+auraButton.SetIcon = adopt("icon")
+auraButton.SetDurationCooldown = adopt("cooldown")
+auraButton.SetDurationText = adopt("durationText")
+auraButton.SetApplicationCount = adopt("count")
+auraButton.AddDispelTypeTexture = adopt("dispel")
+function auraButton:SetSize(w, h) self.w, self.h = w, h end
+
+-- What the engine does when an aura is assigned while auras are secret.
+function S.assignSecretAura(button)
+    local d = button.display
+    if d.cooldown then d.cooldown:SetCooldownFromDurationObject(S.secret("auraDuration")) end
+    if d.durationText then d.durationText:SetText(S.secret("auraRemaining")) end
+    if d.count then d.count:SetText(S.secret("auraCount")) end
+end
+
+local container = {}
+function container:SetUnit(u) self.unit = u end
+function container:SetEnabled(e) self.enabled = e end
+function container:UpdateAllAuras() self.fullUpdates = self.fullUpdates + 1 end
+function container:SetFlowLayoutAnchorPoint(p) self.flowAnchor = p end
+function container:SetFlowLayoutGrowthDirection(h, v) self.growth = { h, v } end
+function container:SetFlowLayoutMaximumLineSize(n) self.maxLine = n end
+function container:AddAuraGroup(key, filter, options)
+    assert(type(key) == "string" and key ~= "" and not self.groups[key], "bad group key")
+    assert(type(filter) == "string" and filter ~= "", "bad filter")
+    assert(options.sortMethod ~= nil, "sortMethod must be a valid AuraContainerSortMethod")
+    local group = { filter = filter, options = options, buttons = {} }
+    for i = 1, 10 do  -- first batch, like CustomAuraContainerConstants.FrameCreationBatchSize
+        local b = setmetatable(S.newWidget(), auraButton)
+        b.kind, b.parent, b.display, b.displayOptions = "AuraButton", self, {}, {}
+        if options.initializeFrame then options.initializeFrame(b) end
+        group.buttons[i] = b
+    end
+    self.groups[key] = group
+    self.groupOrder[#self.groupOrder + 1] = key
+end
+
+function S.initAuraContainer(f)
+    f.groups, f.groupOrder, f.fullUpdates = {}, {}, 0
+    for k, v in pairs(container) do f[k] = v end
 end
 
 -- Deliver a global event the way the client would.
@@ -92,7 +157,10 @@ RAID_CLASS_COLORS = { WARRIOR = { r = .78, g = .61, b = .43 } }
 FACTION_BAR_COLORS = { [4] = { r = 1, g = 1, b = 0 } }
 PowerBarColor = { MANA = { r = 0, g = 0, b = 1 } }
 CurveConstants = { ScaleTo100 = {} }
-Enum = { StatusBarInterpolation = { Immediate = 0, ExponentialEaseOut = 1 } }
+Enum = { StatusBarInterpolation = { Immediate = 0, ExponentialEaseOut = 1 },
+    CustomAuraButtonDispelTypeTextureStyle = { Border = 0, BorderWithIcon = 1, Icon = 2, PreserveAsset = 3, CustomAsset = 4 } }
+AuraContainerSortMethod = { Default = 0, BigDefensive = 1, UnitFrameDebuff = 2, ImportantOnly = 3, Expiration = 4 }
+AnchorUtil = { FlowDirection = { Left = -1, Right = 1, Up = 1, Down = -1 } }
 C_StringUtil = { CreateAbbreviatedNumberFormatter = function()
     return { FormatNumber = function(_, v) assert(issecretvalue(v) or type(v) == "number"); return "1.2M" end }
 end }

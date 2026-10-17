@@ -24,3 +24,4 @@ Skins\Common.lua
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Factory.lua
 Modules\UnitFrames\UnitFrames.lua
+Modules\UnitFrames\Auras.lua

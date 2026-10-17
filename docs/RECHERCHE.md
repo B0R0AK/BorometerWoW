@@ -49,7 +49,7 @@ Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.**
 | 6 | Cooldown-Viewer-Frames skinnen/verschieben ohne Taint | V07 |
 | 7 | Damage-Meter-Fenster: Skin reicht, oder eigene Darstellung nötig; `sourceGUID` ab 12.1.5 teils geheim | V11 |
 | 8 | Party/Raid: Tokens, Namen und Klassenfarbe unter den Unit-Identity-Regeln | V05, V06 |
-| 9 | Aura-Icons: `GetAuraDuration` + Cooldown-Swipe ohne Taint, Bug #881 | V03 |
+| 9 | Auren laufen über `AuraContainer` (`CustomAuraContainerTemplate`, `AddAuraGroup`), weil seit 12.1.0 die Instanz-ID-APIs von `C_UnitAuras` bei geheimen Auren einen Lua-Fehler werfen und `UNIT_AURA` komplett geheim ist (Quelle: `Patch_12.1.0/API_changes/notes`, PTR 3). Prüfen: Container als Kind eines `SecureUnitButton` ohne Taint, Dauertext statt Cooldown-Zahlen (Bug #881), `UpdateAllAuras` bei Zielwechsel im Kampf | V03 |
 | 10 | `GetScriptBucketThrottleLimits`: was begrenzt Blizzard für Addon-Skripte, und wie nutzt der Scheduler das | Core |
 
 Prüfmethode je Punkt: `/console scriptErrors 1`, Secrets erzwingen (siehe oben), Ergebnis hier nachtragen.

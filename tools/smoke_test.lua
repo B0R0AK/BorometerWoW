@@ -72,6 +72,84 @@ test("unit events are unit-filtered", function()
     assert(f.unitEvents.UNIT_HEALTH[1] == "boss3")
 end)
 
+-- auras -------------------------------------------------------------------------
+test("auras: containers on target and boss, player off by default", function()
+    local F = ns.UF.frames
+    assert(F.target.auras and F.target.auras.kind == "AuraContainer", "target container")
+    assert(F.target.auras.template == "CustomAuraContainerTemplate")
+    assert(F.target.auras.unit == "target" and F.target.auras.enabled == true)
+    for i = 1, 5 do
+        local c = F["boss" .. i].auras
+        assert(c and c.unit == "boss" .. i, "boss" .. i)
+    end
+    assert(F.player.auras == false, "player auras should be off")
+    assert(rawget(F.focus, "auras") == nil and rawget(F.targettarget, "auras") == nil)
+end)
+
+test("auras: target groups use API filter strings, own debuffs first", function()
+    local c = ns.UF.frames.target.auras
+    assert(c.groupOrder[1] == "debuffs" and c.groupOrder[2] == "buffs")
+    assert(c.groups.debuffs.filter == "HARMFUL|PLAYER")
+    assert(c.groups.buffs.filter == "HELPFUL")
+    assert(c.groups.buffs.options.layout.forceNewLine == true)
+    assert(c.groups.debuffs.options.maxFrameCount == 10)
+end)
+
+test("auras: layout from fixed sizes, wraps after perRow", function()
+    local c = ns.UF.frames.target.auras
+    assert(c.maxLine == 10 * 24 + 9 * 2, "line size " .. tostring(c.maxLine))
+    assert(c.flowAnchor == "BOTTOMLEFT" and c.growth[1] == 1 and c.growth[2] == 1)
+    local b = ns.UF.frames.boss2.auras
+    assert(b.flowAnchor == "TOPRIGHT" and b.growth[1] == -1 and b.growth[2] == -1)
+    assert(b.groups.debuffs.options.layout.elementWidth == 16)
+end)
+
+test("auras: buttons wired to engine widgets, countdown numbers hidden (#881)", function()
+    local button = ns.UF.frames.target.auras.groups.debuffs.buttons[1]
+    local d = button.display
+    assert(d.icon and d.cooldown and d.durationText and d.count and d.dispel, "display regions missing")
+    assert(d.cooldown.kind == "Cooldown")
+    assert(button.w == 24 and button.h == 24)
+    assert(d.cooldown.hideNumbers == true, "cooldown countdown numbers must be hidden")
+    assert(d.dispel.parent == button and d.count.parent ~= d.cooldown)
+end)
+
+test("auras: secret aura data stays inside the widgets", function()
+    for _, n in ipairs({ "target", "boss1" }) do
+        local c = ns.UF.frames[n].auras
+        for _, key in ipairs(c.groupOrder) do
+            for _, b in ipairs(c.groups[key].buttons) do S.assignSecretAura(b) end
+        end
+    end
+    local d = ns.UF.frames.target.auras.groups.buffs.buttons[3].display
+    assert(issecretvalue(d.count.text) and issecretvalue(d.durationText.text))
+end)
+
+test("auras: no addon UNIT_AURA handling, secret payload is ignored", function()
+    for name, f in pairs(ns.UF.frames) do
+        assert(not f.events.UNIT_AURA, name .. " registered UNIT_AURA")
+    end
+    S.fire("UNIT_AURA", "target", S.secret("updateInfo"))
+end)
+
+test("auras: target change and boss engage refresh the container", function()
+    local c, b = ns.UF.frames.target.auras, ns.UF.frames.boss1.auras
+    local before, beforeBoss = c.fullUpdates, b.fullUpdates
+    S.fire("PLAYER_TARGET_CHANGED")
+    S.fire("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
+    assert(c.fullUpdates == before + 1, "target not refreshed")
+    assert(b.fullUpdates == beforeBoss + 1, "boss not refreshed")
+end)
+
+test("auras: Create is reusable and tolerates missing config", function()
+    assert(ns.UF.Auras.Create(UIParent, "nameplate1", nil) == nil)
+    assert(ns.UF.Auras.Create(UIParent, "nameplate1", { enabled = false, groups = {} }) == nil)
+    local c = ns.UF.Auras.Create(UIParent, "nameplate1", { size = 20, spacing = 1, perRow = 5,
+        growX = "LEFT", growY = "UP", groups = { { key = "d", filter = "HARMFUL|INCLUDE_NAME_PLATE_ONLY", sort = "Nope" } } })
+    assert(c.unit == "nameplate1" and c.flowAnchor == "BOTTOMRIGHT" and c.maxLine == 104)
+    assert(c.groups.d.options.sortMethod == AuraContainerSortMethod.Default)
+end)
+
 -- events ----------------------------------------------------------------------
 test("events: dispatch, unregister during dispatch, compaction", function()
     local owner1, owner2, calls = {}, {}, {}
