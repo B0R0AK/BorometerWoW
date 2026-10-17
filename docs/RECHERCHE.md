@@ -30,6 +30,24 @@ Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.** Die Sandbox hatte k
 | 10 | Aura-Icons: `GetAuraDuration` + Cooldown-Swipe ohne Taint im Kampf | aus Guide | Auren |
 | 11 | `SecureUnitButtonTemplate` + `togglemenu` Klickattribut in 12.x | aus dem Gedächtnis des Standardmusters | Unit Frames |
 
+## Bekannte Blizzard-Bugs (WoWUIBugs, Stand 2026-10-17)
+Quelle: https://github.com/Stanzilla/WoWUIBugs/issues. Nur die Titel der ersten Seiten gelesen, Details je Issue vor der Arbeit prüfen. Der Patch-12.1.5-Wikiartikel war aus der Sandbox nicht abrufbar (Host gesperrt), diese Änderungen sind **nicht** eingearbeitet.
+
+| Issue | Befund | Betrifft |
+|---|---|---|
+| #884 | Cooldown-Manager: Debuffs auf dem Ziel brechen, wenn das Ziel zweimal im selben Frame wechselt | V07 |
+| #875 | Cooldown Manager verfolgt Blutungen nicht | V07 |
+| #881 | Nameplate-Debuffs: Dauerzahlen brechen nach 60 s | V10, V03 |
+| #834 | `UnitChannelInfo`/`UnitChannelDuration` liefern bei Strahl des Frosts falsche Werte | V02 |
+| #420 | `UnitPartialPower` für Beschwörer-Essenzen defekt | V04 |
+| #888 | Aktionsleisten tainten, wenn Addon-Code sie im Kampf zeigt/versteckt | V14 |
+| #876 | Chat-Eingabefeld kann Attribute in M+/Chat-Lockdown dauerhaft geheim machen | V13d |
+| #803 | Scrolling Combat Text kann tainten und Anzeigen verweigern | – |
+| #811 | Tooltip: Secret-Value-Fehler in `LayoutFrame.lua` | V13f |
+| #826 | Dropdown-Taint zerstört Communities-Fenster im Boss-Kampf | V13d, V13f |
+
+Folge: Spezialfälle (Cooldown-Manager-Debuffs, Kanalzauber, Nameplate-Dauer) bekommen eigene Testfälle im Spiel, nicht nur den Smoke-Test.
+
 Jede Zeile wird zu einem Prüfpunkt im jeweiligen PR. Ergebnisse tragen wir hier nach.
 
 ## Performance-Befund aus den Quellen
