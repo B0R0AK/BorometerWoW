@@ -39,6 +39,10 @@ Skins\Mail.lua
 Skins\ObjectiveTracker.lua
 Skins\Collections.lua
 Skins\EncounterJournal.lua
+Skins\CharacterFrame.lua
+Skins\InspectFrame.lua
+Skins\Reputation.lua
+Skins\Currency.lua
 
 Modules\UnitFrames\Elements.lua
 Modules\UnitFrames\Factory.lua
