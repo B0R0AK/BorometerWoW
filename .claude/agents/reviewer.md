@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Prüft einen BoroFrame-Diff auf Secret-Value-Fehler, Taint, Performance und Wartbarkeit. Ändert nichts.
+description: Prüft einen Borometer-Diff auf Secret-Value-Fehler, Taint, Performance und Wartbarkeit. Ändert nichts.
 model: opus
 tools: Read, Grep, Glob, Bash
 ---

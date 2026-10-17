@@ -6,7 +6,7 @@ ns.Debug = Debug
 local seen = {}
 
 function Debug.Print(...)
-    print("|cffe0a64aBoroFrame|r", ...)
+    print("|cffe0a64aBorometer|r", ...)
 end
 
 -- Runs fn in an error boundary. One broken module or skin must not stop the rest.

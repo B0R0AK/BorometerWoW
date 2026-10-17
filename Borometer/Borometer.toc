@@ -1,0 +1,25 @@
+## Interface: 120105
+## Title: Borometer
+## Notes: Damage-Meter-Skin für Retail im Borometer-Design, plus Auswertung nach dem Kampf.
+## Author: B0R0AK
+## Version: 0.1.0
+## SavedVariables: BorometerDB
+## X-Website: https://github.com/B0R0AK/BorometerWoW
+
+Core\Init.lua
+Core\Debug.lua
+Core\Events.lua
+Core\Scheduler.lua
+Core\Pool.lua
+Core\Combat.lua
+Core\Config.lua
+Core\Mover.lua
+Core\Skin.lua
+Core\Slash.lua
+
+Media\Theme.lua
+
+Skins\Common.lua
+
+Modules\DamageMeterSkin\Entries.lua
+Modules\DamageMeterSkin\DamageMeterSkin.lua

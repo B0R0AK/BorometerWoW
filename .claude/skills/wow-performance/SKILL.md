@@ -1,6 +1,6 @@
 ---
 name: wow-performance
-description: Performance-Regeln für BoroFrame-Lua. Laden bei jedem neuen Frame, Event-Handler, Timer, Aura- oder Nameplate-Code.
+description: Performance-Regeln für Borometer-Lua. Laden bei jedem neuen Frame, Event-Handler, Timer, Aura- oder Nameplate-Code.
 ---
 
 # Performance-Regeln
@@ -16,6 +16,6 @@ Ziel: im 20er-Raid mit aktiven Nameplates unter 1 ms Addon-CPU pro Frame im Schn
 7. **Dirty-Flags.** Handler markieren, ein gedrosselter Tick zeichnet einmal. Gilt für Raid-Frames und Meter.
 8. **Lokale Referenzen** für Hot-Path-Globals (`local UnitHealth = UnitHealth`) am Dateianfang. Messwerte sind klein, aber es kostet nichts.
 9. **Lazy Skins.** Skins von Load-on-Demand-Fenstern laufen erst bei `ADDON_LOADED` bzw. `OnShow` des Fensters.
-10. **Messen.** `/run UpdateAddOnCPUUsage()` + `GetAddOnCPUUsage("BoroFrame")` (CVar `scriptProfile=1`), `/dump collectgarbage("count")`. Eigene Tests: `ns.Debug.Profile(name, fn)` in `Core/Debug.lua`.
+10. **Messen.** `/run UpdateAddOnCPUUsage()` + `GetAddOnCPUUsage("Borometer")` (CVar `scriptProfile=1`), `/dump collectgarbage("count")`. Eigene Tests: `ns.Debug.Profile(name, fn)` in `Core/Debug.lua`.
 
 Nie tun: String-Konkatenation pro Frame, Closures im Handler anlegen, `GetBuffDataByIndex`-Schleifen bei jedem Event, `pairs` über große Tabellen pro Tick.

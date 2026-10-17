@@ -1,17 +1,17 @@
 local _, ns = ...
 
-SLASH_BOROFRAME1 = "/boro"
-SLASH_BOROFRAME2 = "/boroframe"
+SLASH_BOROMETER1 = "/borometer"
+SLASH_BOROMETER2 = "/bm"
 
 local help = {
-    "/boro unlock - Frames verschieben an/aus",
-    "/boro module <name> on|off - Modul schalten",
-    "/boro modules - Module auflisten",
-    "/boro resetpos - Positionen zurücksetzen",
-    "/boro reset - Profil zurücksetzen (lädt neu)",
+    "/bm unlock - Frames verschieben an/aus",
+    "/bm module <name> on|off - Modul schalten",
+    "/bm modules - Module auflisten",
+    "/bm resetpos - Positionen zurücksetzen",
+    "/bm reset - Profil zurücksetzen (lädt neu)",
 }
 
-SlashCmdList.BOROFRAME = function(msg)
+SlashCmdList.BOROMETER = function(msg)
     local cmd, a, b = strsplit(" ", strtrim(msg or ""))
     cmd = (cmd or ""):lower()
     if cmd == "unlock" then

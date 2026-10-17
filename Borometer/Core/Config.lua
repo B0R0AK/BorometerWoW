@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Profiles live in BoroFrameDB.profiles. Each character points at one profile.
+-- Profiles live in BorometerDB.profiles. Each character points at one profile.
 -- Defaults are registered per section by the modules and filled in additively,
 -- so adding an option never needs a migration.
 local Config = {}
@@ -53,8 +53,8 @@ function Config:Reset()
 end
 
 local function init()
-    BoroFrameDB = BoroFrameDB or {}
-    db = BoroFrameDB
+    BorometerDB = BorometerDB or {}
+    db = BorometerDB
     db.profiles = db.profiles or {}
     db.profileKeys = db.profileKeys or {}
     db.version = db.version or DB_VERSION

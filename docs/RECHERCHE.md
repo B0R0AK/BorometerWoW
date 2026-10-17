@@ -1,5 +1,7 @@
 # Recherche: WoW Retail API (Midnight, Patch 12.1.5, TOC 120105)
 
+> **Umfang geändert (2026-10-17):** Aus dem UI-Projekt BoroFrame ist das Damage-Meter-Addon **Borometer** geworden. Abschnitte zu Unit Frames, Auren, Cooldown Manager, Boss-Timeline, Nameplates und Fenster-Skins bleiben als geprüftes API-Wissen stehen, gehören aber nicht mehr zum Umfang. Maßgeblich für Borometer: Abschnitt „Damage Meter“ und `docs/ARCHITEKTUR.md`.
+
 Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.**
 
 ## Quellen und ihr Gewicht
@@ -32,6 +34,16 @@ Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.**
 - In Standardposition hängen Essential, Utility und BuffIcon im `BottomManagedFrameContainer` (Reparent + Layout durch Blizzard). BuffBar nicht.
 - Jeder Relayout-Weg (`RefreshLayout`, `OnShow`, Edit-Mode-Einstellungen) endet in `GridLayoutFrameMixin:Layout` am Viewer. Ein `hooksecurefunc(viewer, "Layout", …)` reicht. Item-Mixins werden nicht gehakt (Aura-Kette, Taint-Gefahr laut Community-Guide).
 - Blizzard setzt die Swipe-Farbe bei jedem Refresh neu (`RefreshSpellCooldownInfo`), Swipe-Textur und Countdown-Font nur einmal (`OnLoad`).
+
+## Damage Meter (`C_DamageMeter`), geprüft gegen das Wiki
+- Funktionen: `IsDamageMeterAvailable`, `GetAvailableCombatSessions`, `GetCombatSessionFromType/FromID(sessionType|sessionID, meterType)`, `GetCombatSessionSourceFromType/FromID(…, sourceGUID, sourceCreatureID)`, `GetSessionDurationSeconds`, `ResetAllCombatSessions`.
+- Sitzung: `combatSources[]`, `maxAmount`, `totalAmount`, `durationSeconds`; **`SecretWhenInCombat`**. Quelle: `sourceGUID` (bedingt geheim), `sourceCreatureID`, `name` (bedingt geheim), `totalAmount`, `amountPerSecond`, `deathTimeSeconds`, `sourceDisplayType` (Ally/Enemy), `factionGroup`; nie geheim: `classFilename`, `specIconID`, `isLocalPlayer`, `classification`, `deathRecapID`.
+- Quellen-Detail: `combatSpells[]` mit `spellID`, `totalAmount`, `amountPerSecond`, `overkillAmount`, `isAvoidable`, `isDeadly`, `creatureName`, `combatSpellDetails` (Einheit, Klasse, Pet/Mob, Menge).
+- Enums: `DamageMeterSessionType` (Overall, Current, Expired), `DamageMeterType` (DamageDone, Dps, HealingDone, Hps, Absorbs, Interrupts, Dispels, DamageTaken, AvoidableDamageTaken, Deaths, EnemyDamageTaken).
+- Events: `DAMAGE_METER_COMBAT_SESSION_UPDATED(type, sessionID)`, `DAMAGE_METER_CURRENT_SESSION_UPDATED`, `DAMAGE_METER_RESET`.
+- Folge: Auswertung nach dem Kampf ist mit Klartext möglich, Live im Kampf nur über Engine-Widgets.
+
+**Im Spiel zu klären (Borometer):** (a) kommen `combatSources` bereits nach Betrag sortiert, auch im Kampf? (b) ab wann sind die Werte nach dem Kampf Klartext, direkt nach `PLAYER_REGEN_ENABLED` oder erst nach `DAMAGE_METER_CURRENT_SESSION_UPDATED`? (c) bleiben `name` und `sourceGUID` in Instanzen/PvP auch nach dem Kampf geheim (dann nur Klasse und Spezialisierung anzeigbar)? (d) was liefert `Overall` über mehrere Kämpfe, und wie lange hält Blizzard Sitzungen vor (Grenze für Verlauf)? (e) `Deaths`: was bedeutet `deathRecapID`, gibt es einen Zugriff auf den Bericht?
 
 ## Bekannte Blizzard-Bugs (WoWUIBugs, nur Titel gelesen)
 | Issue | Befund | Betrifft |

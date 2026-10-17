@@ -6,9 +6,9 @@
 ## Modellwahl
 | Modell | Wann | Agent |
 |---|---|---|
-| Sonnet | Schema steht schon: Skins nach Vorlage, Optionen, Lokalisierung, Doku, Packaging | `builder-leicht` |
-| Opus | eigene Logik, mehrere Dateien: Unit-Frame-Elemente, Auren, Cooldown-Manager, Nameplates, Timeline, Meter-Skin, Inventar | `builder-komplex`, `reviewer` |
-| Fable | Fehler hier sind teuer: alles in `Core/`, Secret-/Taint-Grenzen, Secure-Header (Party/Raid), Migrationen, Release, Leitstand selbst | `builder-kritisch`, `leitstand` |
+| Sonnet | Schema steht schon: Lokalisierung, Doku, Packaging, kleine Optionen | `builder-leicht` |
+| Opus | eigene Logik, mehrere Dateien: Auswertung, Ring, Aufschlüsselung, Live-Anzeige, Meter-Skin, Optionen | `builder-komplex`, `reviewer` |
+| Fable | Fehler hier sind teuer: alles in `Core/`, Secret-/Taint-Grenzen, Datenschicht und Verlauf (SavedVariables), Migrationen, Release, Leitstand selbst | `builder-kritisch`, `leitstand` |
 
 Faustregel: Berührt es Secret Values in neuer Weise, Secure-Frames im Kampf oder SavedVariables-Struktur, geht es eine Stufe hoch.
 
@@ -17,7 +17,7 @@ Faustregel: Berührt es Secret Values in neuer Weise, Secure-Frames im Kampf ode
 2. Builder arbeitet auf `vorhaben/<nr>-<kurz>`, ruft `bash tools/check.sh` auf.
 3. PR mit Vorlage. Reviewer prüft, rote Punkte blockieren.
 4. Leitstand mergt (Squash). Core zuerst, abhängige Vorhaben danach.
-5. Release: Skill `boroframe-release`. Der Leitstand fragt vor dem Release beim Nutzer nach.
+5. Release: Skill `borometer-release`. Der Leitstand fragt vor dem Release beim Nutzer nach.
 
 ## Parallelität
-Module sind unabhängig, sie hängen nur an `Core/`. Core-Änderungen laufen einzeln und zuerst.
+Module sind unabhängig, sie hängen nur an `Core/` und an der Datenschicht (M02). Core-Änderungen laufen einzeln und zuerst.

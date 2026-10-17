@@ -1,6 +1,6 @@
 ---
 name: wow-midnight-api
-description: WoW Retail Midnight (12.1.x) API-Wissen für BoroFrame, geprüft gegen warcraft.wiki.gg und Blizzards UI-Quellcode. Laden bei jeder Arbeit an Frames, Auren, Cooldowns, Casts, Nameplates, Damage Meter, Boss-Timeline oder Secret Values.
+description: WoW Retail Midnight (12.1.x) API-Wissen für Borometer, geprüft gegen warcraft.wiki.gg und Blizzards UI-Quellcode. Laden bei jeder Arbeit an Frames, Auren, Cooldowns, Casts, Nameplates, Damage Meter, Boss-Timeline oder Secret Values.
 ---
 
 # WoW Midnight API (Interface 120105, Patch 12.1.5)

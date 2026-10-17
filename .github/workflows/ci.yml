@@ -12,4 +12,4 @@ jobs:
         with: { python-version: "3.12" }
       - run: bash tools/check.sh
       - uses: lunarmodules/luacheck@v1
-        with: { args: BoroFrame }
+        with: { args: Borometer }
