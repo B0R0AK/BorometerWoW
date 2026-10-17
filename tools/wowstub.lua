@@ -7,6 +7,8 @@ local widget = {}
 widget.__index = function(t, k)
     local m = rawget(widget, k)
     if m then return m end
+    -- Lua fields (lowercase, like Blizzard mixin state) are nil when unset, as in the client
+    if type(k) == "string" and k:match("^%l") then return nil end
     return function() end  -- every other widget method is a no-op
 end
 
@@ -34,6 +36,14 @@ function widget:SetText(t) self.text = t end
 function widget:SetFormattedText(f, ...) self.formatted = { f, ... } end
 function widget:SetValue(v) self.value = v end
 function widget:SetMinMaxValues(a, b) self.min, self.max = a, b end
+function widget:ClearAllPoints() self.points = {} end
+function widget:SetPoint(...) self.points = self.points or {}; self.points[#self.points + 1] = { ... } end
+function widget:SetSize(w, h) self.w, self.h = w, h end
+function widget:SetScale(s) self.scale = s end
+function widget:GetEffectiveScale() return self.effScale or 1 end
+function widget:IsProtected() return self.protected == true end
+function widget:SetAlpha(a) self.alpha = a end
+function widget:SetFont(font, size, flags) self.font = { font, size, flags } end
 
 function S.newWidget()
     return setmetatable({ scripts = {}, hooks = {}, events = {}, unitEvents = {}, attr = {}, shown = true, watched = false }, widget)
@@ -83,6 +93,16 @@ function ReloadUI() S.reloaded = true end
 function debugprofilestop() return os.clock() * 1000 end
 function RegisterUnitWatch(f) f.watched = true end
 SlashCmdList = {}
+-- Post-hook like the client: original runs first, its results are returned unchanged.
+function hooksecurefunc(t, k, fn)
+    if type(t) == "string" then t, k, fn = _G, t, k end
+    local orig = t[k]
+    t[k] = function(...)
+        local r = { orig(...) }
+        fn(...)
+        return unpack(r)
+    end
+end
 S.timers = {}
 C_Timer = { After = function(sec, fn) S.timers[#S.timers + 1] = { sec, fn } end }
 C_AddOns = { GetAddOnMetadata = function() return "0.0.0" end, IsAddOnLoaded = function(n) return S.loaded and S.loaded[n] or false end }

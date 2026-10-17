@@ -1,4 +1,4 @@
--- Headless smoke test for Core and the UnitFrames slice. Run through tools/smoke.py.
+-- Headless smoke test for Core, the UnitFrames slice and the CooldownManager. Run through tools/smoke.py.
 local root = ...
 dofile(root .. "/tools/wowstub.lua")
 local S = STUB
@@ -159,6 +159,199 @@ test("slash commands parse", function()
     SlashCmdList.BOROFRAME("modules")
     SlashCmdList.BOROFRAME("")
     SlashCmdList.BOROFRAME("module UnitFrames on")
+end)
+
+-- cooldown manager --------------------------------------------------------------
+local OVERLAY = "UI-HUD-CoolDownManager-IconOverlay"
+
+local function fakeTexture(atlas)
+    local t = S.newWidget()
+    t.atlas, t.masks = atlas, { S.newWidget() }
+    function t:GetAtlas() return self.atlas end
+    function t:IsObjectType(kind) return kind == "Texture" end
+    function t:GetNumMaskTextures() return #self.masks end
+    function t:GetMaskTexture(i) return self.masks[i] end
+    function t:RemoveMaskTexture(m)
+        for i = #self.masks, 1, -1 do if self.masks[i] == m then table.remove(self.masks, i) end end
+    end
+    return t
+end
+
+local function fakeIconItem(index, cooldownID)
+    local item = CreateFrame("Frame")
+    item.layoutIndex, item.cooldownID, item.shown = index, cooldownID, cooldownID ~= nil
+    item.Icon = fakeTexture(nil)
+    item.overlay = fakeTexture(OVERLAY)
+    item.secretRegion = fakeTexture(S.secret("atlas"))  -- comparing this would throw
+    function item:GetRegions() return self.Icon, self.overlay, self.secretRegion end
+    item.Cooldown = CreateFrame("Cooldown")
+    local cdText = S.newWidget()
+    function item.Cooldown:GetCountdownFontString() return cdText end
+    item.cdText = cdText
+    item.ChargeCount = CreateFrame("Frame")
+    item.ChargeCount.Current = S.newWidget()
+    item.ChargeCount.Current:SetText(S.secret("charges"))
+    item.Applications = false  -- BuffIcon-only parentKey; unset keys are no-op methods in the stub
+    return item
+end
+
+local function fakeBarItem(index, cooldownID)
+    local item = CreateFrame("Frame")
+    item.layoutIndex, item.cooldownID = index, cooldownID
+    item.Icon = CreateFrame("Frame")
+    item.Icon.Icon = fakeTexture(nil)
+    item.Icon.Applications = S.newWidget()
+    local overlay = fakeTexture(OVERLAY)
+    item.Icon.overlay = overlay
+    function item.Icon:GetRegions() return self.Icon, overlay end
+    item.Bar = CreateFrame("StatusBar")
+    item.Bar.BarBG, item.Bar.Pip = S.newWidget(), S.newWidget()
+    item.Bar.Name, item.Bar.Duration = S.newWidget(), S.newWidget()
+    -- Blizzard feeds its bar with values that are secret in combat
+    item.Bar:SetMinMaxValues(0, S.secret("duration"))
+    item.Bar:SetValue(S.secret("remaining"))
+    item.Bar.Duration:SetText(S.secret("time"))
+    return item
+end
+
+-- Mimics GridLayoutFrameMixin:Layout: Blizzard anchors every item to the viewer.
+local function fakeViewer(name, items)
+    local v = CreateFrame("Frame", name)
+    local active = {}
+    for _, it in ipairs(items) do active[it] = true end
+    v.itemFramePool = { EnumerateActive = function() return pairs(active) end }
+    v.items = items
+    function v:Layout()
+        for it in pairs(active) do
+            it:ClearAllPoints()
+            it:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0)
+        end
+    end
+    return v
+end
+
+local function anchor(item) return item.points and item.points[#item.points] end
+local CDM = ns.modules.CooldownManager
+local cdmCfg = BoroFrameDB.profiles.Default.cooldownmanager
+local function entry(key)
+    for _, e in ipairs(CDM._entries) do if e.key == key then return e end end
+end
+
+test("cdm: waits for Blizzard_CooldownViewer", function()
+    assert(CDM:IsEnabled())
+    assert(#CDM._entries == 0)
+    assert(cdmCfg.essential.size == 42 and cdmCfg.buffbar.width == 200)
+end)
+
+local ess = fakeViewer("EssentialCooldownViewer",
+    { fakeIconItem(3, 103), fakeIconItem(1, 101), fakeIconItem(2, 102), fakeIconItem(4, nil) })
+local util = fakeViewer("UtilityCooldownViewer", { fakeIconItem(1, 201), fakeIconItem(2, 202) })
+local buffIcons = fakeViewer("BuffIconCooldownViewer", { fakeIconItem(1, 301) })
+local bars = fakeViewer("BuffBarCooldownViewer", { fakeBarItem(1, 401), fakeBarItem(2, 402) })
+local function sorted(v)
+    local t = {}
+    for _, it in ipairs(v.items) do t[it.layoutIndex] = it end
+    return t
+end
+
+test("cdm: hooks on ADDON_LOADED, disabled viewer stays Blizzard's", function()
+    cdmCfg.bufficon.enabled = false
+    S.loaded = S.loaded or {}
+    S.loaded.Blizzard_CooldownViewer = true
+    S.fire("ADDON_LOADED", "Blizzard_CooldownViewer")
+    assert(#CDM._entries == 3, "entries " .. #CDM._entries)
+    buffIcons:Layout()
+    assert(anchor(buffIcons.items[1])[2] == buffIcons)
+    assert(not ns.CDMStyle.IsSkinned(buffIcons.items[1]))
+end)
+
+test("cdm: icons skinned without touching info elements or secrets", function()
+    local it = sorted(ess)[1]
+    assert(ns.CDMStyle.IsSkinned(it))
+    assert(it.overlay.alpha == 0, "overlay atlas not hidden")
+    assert(it.secretRegion.alpha == nil, "secret-atlas region was touched")
+    assert(#it.Icon.masks == 0, "mask not removed")
+    assert(it.w == 42 and it.h == 42 and it.scale == 1)
+    assert(it.cdText.font[2] == 16, "countdown font " .. tostring(it.cdText.font[2]))
+    assert(issecretvalue(it.ChargeCount.Current.text))
+end)
+
+test("cdm: icons follow the holder, centered, padding slot skipped", function()
+    local e, s = entry("essential"), sorted(ess)
+    for i = 1, 3 do
+        local a = anchor(s[i])
+        assert(a[1] == "TOP" and a[2] == e.holder, "item " .. i)
+        assert(a[4] == (i - 2) * 44, "x " .. tostring(a[4]))
+    end
+    assert(anchor(s[4]) == nil, "padding slot moved")
+end)
+
+test("cdm: Blizzard relayout is re-anchored by the post-hook", function()
+    ess:Layout()
+    assert(anchor(sorted(ess)[2])[2] == entry("essential").holder)
+end)
+
+test("cdm: Edit Mode owns positions while editing", function()
+    ess.isEditing = true
+    ess:Layout()
+    assert(anchor(sorted(ess)[1])[2] == ess)
+    ess.isEditing = nil
+    ess:Layout()
+    assert(anchor(sorted(ess)[1])[2] == entry("essential").holder)
+end)
+
+test("cdm: protected chain in combat defers once", function()
+    S.inCombat = true
+    ess.protected = true
+    ess:Layout()
+    ess:Layout()
+    assert(anchor(sorted(ess)[1])[2] == ess, "touched in combat")
+    assert(ns.Combat:Pending() == 1, "pending " .. ns.Combat:Pending())
+    -- unprotected viewer may be re-anchored in combat
+    util:Layout()
+    assert(anchor(sorted(util)[1])[2] == entry("utility").holder)
+    S.inCombat = false
+    ess.protected = nil
+    S.fire("PLAYER_REGEN_ENABLED")
+    assert(anchor(sorted(ess)[1])[2] == entry("essential").holder)
+end)
+
+test("cdm: buff bars styled, stacked, secrets left alone", function()
+    local e, s = entry("buffbar"), sorted(bars)
+    local a1, a2 = anchor(s[1]), anchor(s[2])
+    assert(a1[1] == "TOPLEFT" and a1[2] == e.holder and a1[5] == 0)
+    assert(a2[5] == -22, "y " .. tostring(a2[5]))
+    assert(s[1].w == 200 and s[1].h == 20 and s[1].Icon.w == 20)
+    assert(s[1].Icon.overlay.alpha == 0)
+    assert(s[1].Bar.Pip.w == 1 and s[1].Bar.Pip.h == 20)
+    assert(issecretvalue(s[1].Bar.value) and issecretvalue(s[1].Bar.max))
+    assert(issecretvalue(s[1].Bar.Duration.text))
+end)
+
+test("cdm: viewer scale is compensated", function()
+    util.effScale = 2
+    util:Layout()
+    local it = sorted(util)[1]
+    assert(it.w == 16, "size " .. tostring(it.w))
+    util.effScale = nil
+    util:Layout()
+end)
+
+test("cdm: refresh applies new row limit", function()
+    cdmCfg.essential.perRow = 2
+    CDM:Refresh()
+    local a3 = anchor(sorted(ess)[3])
+    assert(a3[4] == 0 and a3[5] == -44, "row 2: " .. tostring(a3[4]) .. "," .. tostring(a3[5]))
+    cdmCfg.essential.perRow = 8
+    CDM:Refresh()
+end)
+
+test("cdm: disabled module leaves Blizzard layout alone", function()
+    ns:DisableModule("CooldownManager")
+    ess:Layout()
+    assert(anchor(sorted(ess)[1])[2] == ess)
+    ns:EnableModule("CooldownManager")
+    assert(anchor(sorted(ess)[1])[2] == entry("essential").holder)
 end)
 
 print(("OK %d tests"):format(passed))

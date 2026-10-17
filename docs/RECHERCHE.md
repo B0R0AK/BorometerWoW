@@ -26,6 +26,13 @@ Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.**
 - **12.1.5:** deprecated Fallbacks entfernt (`GetItemInfo`, `GetItemCount`, `IsEquippedItem`, `GetCoinText` … nur noch über `C_Item.*`, `C_CurrencyInfo.*`). Neu `CreateFrameWithOptions`, `GetScriptBucketThrottleLimits`, `C_UnitAuras.GetAuraCasterGUID`, `GetRefreshCarryOverDuration`, Nameplate-CVars `nameplateTopInset/BottomInset/MotionSpeed`.
 - Frame-Namen geprüft: `EncounterTimeline`, `CriticalEncounterWarnings`/`MediumEncounterWarnings`/`MinorEncounterWarnings`, `DamageMeter`, `EssentialCooldownViewer`, `UtilityCooldownViewer`, `BuffIconCooldownViewer`, `BuffBarCooldownViewer`, `CooldownViewerSettings`.
 
+## Cooldown Manager (V07, Blizzards Code 12.1.5 Build 70448 gelesen)
+- `Blizzard_CooldownViewer.toc` hat kein `LoadOnDemand`, hängt an `Blizzard_EditMode`. Das Modul hakt trotzdem auch über `ADDON_LOADED` ein, falls es später lädt.
+- Edit Mode ersetzt auf jedem Viewer `SetPoint`, `ClearAllPoints`, `SetScale` durch Lua-Overrides (`EditModeSystemMixin:OnSystemLoad`), die Snap-Zustand schreiben und `EditModeManagerFrame:OnEditModeSystemAnchorChanged()` aufrufen. Aufruf aus Addon-Code taintet Edit Mode. Deshalb bewegt BoroFrame den Viewer nie, sondern verankert die Items an einem eigenen Halter-Frame (`ns.Mover`).
+- In Standardposition hängen Essential, Utility und BuffIcon im `BottomManagedFrameContainer` (Reparent + Layout durch Blizzard). BuffBar nicht.
+- Jeder Relayout-Weg (`RefreshLayout`, `OnShow`, Edit-Mode-Einstellungen) endet in `GridLayoutFrameMixin:Layout` am Viewer. Ein `hooksecurefunc(viewer, "Layout", …)` reicht. Item-Mixins werden nicht gehakt (Aura-Kette, Taint-Gefahr laut Community-Guide).
+- Blizzard setzt die Swipe-Farbe bei jedem Refresh neu (`RefreshSpellCooldownInfo`), Swipe-Textur und Countdown-Font nur einmal (`OnLoad`).
+
 ## Bekannte Blizzard-Bugs (WoWUIBugs, nur Titel gelesen)
 | Issue | Befund | Betrifft |
 |---|---|---|
@@ -46,7 +53,7 @@ Stand: 2026-10-17. **Nichts davon wurde im Spiel getestet.**
 | 3 | `SecureUnitButtonTemplate` mit `*type2 = "togglemenu"` in 12.1 | Unit Frames |
 | 4 | `StatusBar:SetValue(secret, interpolation)` mit Smoothing: sichtbar sauber bei Boss-Frames (Max-Leben geheim)? | Unit Frames |
 | 5 | Timeline: Verhalten von `SetViewType(None)` mit BigWigs-Modus `enhanced`; wann liefert BigWigs eigene Bars (`useCustomTimers`) statt Blizzard-Events | V08, V09 |
-| 6 | Cooldown-Viewer-Frames skinnen/verschieben ohne Taint | V07 |
+| 6 | Cooldown-Viewer-Frames skinnen/verschieben ohne Taint (Items am Halter, Viewer unberührt); sind Items in Standardposition im Kampf geschützt (`IsProtected`)? | V07 |
 | 7 | Damage-Meter-Fenster: Skin reicht, oder eigene Darstellung nötig; `sourceGUID` ab 12.1.5 teils geheim | V11 |
 | 8 | Party/Raid: Tokens, Namen und Klassenfarbe unter den Unit-Identity-Regeln | V05, V06 |
 | 9 | Aura-Icons: `GetAuraDuration` + Cooldown-Swipe ohne Taint, Bug #881 | V03 |
