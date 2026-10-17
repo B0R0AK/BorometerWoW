@@ -890,4 +890,122 @@ test("cdm: disabled module leaves Blizzard layout alone", function()
     assert(anchor(sorted(ess)[1])[2] == entry("essential").holder)
 end)
 
+-- timeline --------------------------------------------------------------------
+local TL = ns.Timeline
+local TLS = Enum.EncounterTimelineEventState
+local VIEW = Enum.EncounterTimelineViewType
+
+local function rowFor(id) return TL.Renderer.rows[id] end
+
+test("timeline: enabled, blizzard view locked to None", function()
+    assert(ns.modules.Timeline:IsEnabled())
+    assert(S.tl.view == VIEW.None, "view " .. tostring(S.tl.view))
+    assert(EncounterTimeline.attr.overrideViewType == VIEW.None)
+    assert(TL.Renderer.source == TL.BlizzardSource)
+end)
+
+test("timeline: secret events become sorted bars without Lua on secrets", function()
+    S.tlAdd(11, 30)
+    S.tlAdd(12, 5)
+    S.tlAdd(13, 12)
+    S.runTimers(true)
+    assert(TL.Renderer:ActiveCount() == 3)
+    assert(rowFor(12).slot == 1 and rowFor(13).slot == 2 and rowFor(11).slot == 3)
+    local row = rowFor(12)
+    assert(row.kind == "bar" and row.shown)
+    assert(issecretvalue(row.name.text), "name must reach the widget untouched")
+    assert(issecretvalue(row.icon.texture), "icon must reach the widget untouched")
+    assert(issecretvalue(row.bar.color[1]), "event color goes to the bar as is")
+    assert(row.bar.timer[1] == S.tl.events[12].timer, "bar driven by the event timer")
+    assert(row.bar.timer[3] == Enum.StatusBarTimerDirection.RemainingTime)
+    assert(row.binding.enabled and row.binding.duration == S.tl.events[12].timer, "countdown via text binding")
+    assert(S.tl.iconCalls >= 6, "symbols assigned by the client")
+end)
+
+test("timeline: duplicate add is ignored, max bars caps the list", function()
+    S.fire("ENCOUNTER_TIMELINE_EVENT_ADDED", C_EncounterTimeline.GetEventInfo(12))
+    assert(TL.Renderer:ActiveCount() == 3)
+    SlashCmdList.BOROFRAME("timeline bars 2")
+    S.runTimers(true)
+    assert(rowFor(11).shown == false and rowFor(12).shown and rowFor(13).shown)
+    SlashCmdList.BOROFRAME("timeline bars 8")
+    S.runTimers(true)
+end)
+
+test("timeline: paused, finished, canceled, removed", function()
+    S.tlState(13, TLS.Paused)
+    assert(rowFor(13).alpha == 0.55)
+    S.tlState(13, TLS.Active)
+    assert(rowFor(13).alpha == 1)
+    S.tlState(12, TLS.Finished)
+    local row = rowFor(12)
+    assert(row.fade:IsPlaying())
+    S.tlRemove(12)
+    assert(rowFor(12) == nil and TL.Renderer.fading[row], "fading row kept until its outro ends")
+    row.fade.scripts.OnFinished(row.fade)
+    assert(not TL.Renderer.fading[row] and row.ev == nil and row.bar.max == 0, "released, timer dropped")
+    S.tlState(11, TLS.Canceled)
+    S.tlRemove(11)
+    S.runTimers(true)
+    assert(TL.Renderer:ActiveCount() == 1)
+end)
+
+test("timeline: options rebuild rows, track view uses pips", function()
+    SlashCmdList.BOROFRAME("timeline width 300")
+    SlashCmdList.BOROFRAME("timeline grow up")
+    local cfg = BoroFrameDB.profiles.Default.timeline
+    assert(cfg.width == 300 and cfg.grow == "UP")
+    SlashCmdList.BOROFRAME("timeline width 5")
+    assert(cfg.width == 120, "clamped")
+    SlashCmdList.BOROFRAME("timeline view track")
+    S.runTimers(true)
+    local pip = rowFor(13)
+    assert(pip.kind == "pip" and pip.shown)
+    assert(pip.w == 120 * S.tl.events[13].duration / cfg.trackSeconds, "pip width maps duration to track scale")
+    assert(issecretvalue(pip.edge.vcolor[1]), "event color tints the pip edge as is")
+    SlashCmdList.BOROFRAME("timeline view bars")
+    SlashCmdList.BOROFRAME("timeline grow down")
+    SlashCmdList.BOROFRAME("timeline width 260")
+    S.runTimers(true)
+    assert(rowFor(13).kind == "bar")
+end)
+
+test("timeline: test mode adds and cancels edit mode events", function()
+    SlashCmdList.BOROFRAME("timeline test")
+    S.runTimers(true)
+    assert(ns.modules.Timeline:IsTesting() and TL.Renderer:ActiveCount() == 4)
+    S.fire("PLAYER_REGEN_DISABLED")
+    assert(not ns.modules.Timeline:IsTesting() and TL.Renderer:ActiveCount() == 1)
+    SlashCmdList.BOROFRAME("timeline test")
+    SlashCmdList.BOROFRAME("timeline test")
+    assert(not ns.modules.Timeline:IsTesting())
+end)
+
+test("timeline: off restores the previous view, on takes over again", function()
+    SlashCmdList.BOROFRAME("timeline off")
+    assert(S.tl.view == VIEW.Bars and EncounterTimeline.attr.overrideViewType == nil)
+    assert(TL.Renderer:ActiveCount() == 0 and TL.Renderer.container.shown == false)
+    S.tlAdd(14, 8)  -- no listener while off
+    SlashCmdList.BOROFRAME("timeline on")
+    S.runTimers(true)
+    assert(S.tl.view == VIEW.None and TL.Renderer:ActiveCount() == 2, "resynced from GetEventList")
+    SlashCmdList.BOROFRAME("timeline")
+    SlashCmdList.BOROFRAME("modules")  -- base /boro still reachable through the wrapper
+end)
+
+test("timeline: encounter warnings get skinned via post-hooks", function()
+    local shown = 0
+    for _, name in ipairs({ "CriticalEncounterWarnings", "MediumEncounterWarnings", "MinorEncounterWarnings" }) do
+        local view = { LeftIcon = S.newWidget(), RightIcon = S.newWidget(), Text = S.newWidget() }
+        view.LeftIcon.Icon, view.LeftIcon.NormalOverlay = S.newWidget(), S.newWidget()
+        view.Text.Init = function() shown = shown + 1 end
+        _G[name] = { View = view }
+    end
+    S.fire("ADDON_LOADED", "Blizzard_EncounterWarnings")
+    local view = CriticalEncounterWarnings.View
+    assert(view.LeftIcon.NormalOverlay.alpha == 0)
+    view.Text:Init({ text = S.secret("warn") })
+    assert(shown == 1, "Blizzard's Init still runs")
+end)
+
 print(("OK %d tests"):format(passed))

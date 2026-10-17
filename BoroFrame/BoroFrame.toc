@@ -57,3 +57,9 @@ Modules\DamageMeterSkin\DamageMeterSkin.lua
 
 Modules\CooldownManager\Style.lua
 Modules\CooldownManager\CooldownManager.lua
+
+Modules\Timeline\Source.lua
+Modules\Timeline\Rows.lua
+Modules\Timeline\Renderer.lua
+Modules\Timeline\Warnings.lua
+Modules\Timeline\Timeline.lua
